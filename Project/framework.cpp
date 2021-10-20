@@ -61,13 +61,21 @@ void GameFramework::OnDestroy()
 	CloseHandle(m_fenceEvent);
 }
 
-void GameFramework::OnMouseEvent() const
+void GameFramework::OnMouseEvent()
 {
+	// 상시 마우스 이벤트
 	if (m_scene) m_scene->OnMouseEvent(m_hWnd, m_width, m_height, m_timer.GetDeltaTime());
+}
+
+void GameFramework::OnMouseEvent(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	// 윈도우 마우스 이벤트
+	if (m_scene) m_scene->OnMouseEvent(hWnd, message, wParam, lParam);
 }
 
 void GameFramework::OnKeyboardEvent() const
 {
+	// 상시 키보드 이벤트
 	if (m_scene) m_scene->OnKeyboardEvent(m_timer.GetDeltaTime());
 }
 

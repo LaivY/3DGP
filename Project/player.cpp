@@ -14,13 +14,14 @@ void Player::Update(FLOAT deltaTime)
 	// 플레이어가 어떤 지형 위에 있다면
 	if (m_terrain)
 	{
-		// 플레이어가 지형 위를 이동하도록
 		XMFLOAT3 pos{ GetPosition() };
-		FLOAT height{ m_terrain->GetHeight(pos.x, pos.z) };
-		SetPosition(XMFLOAT3{ pos.x, height + 0.5f, pos.z });
 
 		// 플레이어가 서있는 곳의 노말을 저장
 		m_normal = m_terrain->GetNormal(pos.x, pos.z);
+
+		// 플레이어가 지형 위를 이동하도록
+		FLOAT height{ m_terrain->GetHeight(pos.x, pos.z) };
+		SetPosition(XMFLOAT3{ pos.x, height + 0.5f, pos.z });
 	}
 
 	// 마찰력 적용
@@ -56,7 +57,7 @@ void Player::UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& comma
 	// +y축과 m_normal이 다를 때
 	if (theta)
 	{
-		// +z축을 보고있을 때의 right벡터 계산
+		// right벡터 계산
 		XMFLOAT3 right{ Vector3::Normalize(Vector3::Cross(m_up, m_normal)) };
 		if (m_normal.z < 0)
 		{

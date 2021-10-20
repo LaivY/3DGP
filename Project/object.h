@@ -18,8 +18,9 @@ public:
 	virtual void Move(const XMFLOAT3& shift);
 	virtual void Rotate(FLOAT roll, FLOAT pitch, FLOAT yaw);
 	virtual void UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& commandList) const;
-	void ReleaseUploadBuffer() const;
+	virtual void ReleaseUploadBuffer() const;
 
+	void SetFront(const XMFLOAT3& front);
 	void SetPosition(const XMFLOAT3& position);
 	void SetMesh(const shared_ptr<Mesh>& mesh);
 	void SetShader(const shared_ptr<Shader>& shader);
@@ -32,6 +33,7 @@ public:
 	XMFLOAT3 GetUp() const { return m_up; }
 	XMFLOAT3 GetFront() const { return m_front; }
 	HeightMapTerrain* GetTerrain() const { return m_terrain; }
+	XMFLOAT3 GetNormal() const { return m_normal; }
 
 protected:
 	XMFLOAT4X4				m_worldMatrix;		// 월드 변환
@@ -63,4 +65,18 @@ public:
 
 private:
 	shared_ptr<Camera> m_camera; // 기준이 되는 카메라
+};
+
+class Bullet : public GameObject
+{
+public:
+	Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, FLOAT speed = 10.0f, FLOAT damage = 1.0f);
+	~Bullet() = default;
+
+	virtual void Update(FLOAT deltaTime);
+
+private:
+	XMFLOAT3	m_direction;	// 날아가는 방향
+	FLOAT		m_speed;		// 날아가는 속도
+	FLOAT		m_damage;		// 피해량
 };

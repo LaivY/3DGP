@@ -7,15 +7,16 @@
 #include <windows.h>
 
 // C/C++
-#include <algorithm>
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
+#include <wrl.h>
+#include <algorithm>
 #include <iostream>
 #include <exception>
 #include <vector>
-#include <wrl.h>
+#include <map>
 using namespace std;
 using Microsoft::WRL::ComPtr;
 

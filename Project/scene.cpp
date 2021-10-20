@@ -1,18 +1,52 @@
 #include "scene.h"
 
+shared_ptr<Mesh> Resources::GetMesh(const string& key) const
+{
+	auto value{ m_meshes.find(key) };
+	if (value == m_meshes.end())
+		return nullptr;
+	return value->second;
+}
+
+shared_ptr<Shader> Resources::GetShader(const string& key) const
+{
+	auto value{ m_shaders.find(key) };
+	if (value == m_shaders.end())
+		return nullptr;
+	return value->second;
+}
+
+shared_ptr<Texture> Resources::GetTexture(const string& key) const
+{
+	auto value{ m_textures.find(key) };
+	if (value == m_textures.end())
+		return nullptr;
+	return value->second;
+}
+
+// --------------------------------------
+
 void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const ComPtr<ID3D12RootSignature>& rootSignature, FLOAT aspectRatio)
 {
-	// 여기서 생성하는 개체들(메쉬, 텍스쳐)은 명령을 제출하기 때문에 명령이 완료되기 전까지 메모리 위에 존재해야함
-	// -> 스마트포인터로 어느 오브젝트에서도 사용하지 않는 메쉬, 텍스쳐를 만들면 이 함수를 벗어나면 해제되므로 오류가 발생함
+	// 메쉬, 셰이더, 텍스쳐들은 모두 Resources에 있는 map에 담는다.
+	// Resources::Add??? 함수를 통해 리소스를 추가하고 Resources::Get??? 함수를 통해 리소스를 불러올 수 있다.
+
+	// 리소스들 담고있을 m_resources 생성
+	m_resources = make_unique<Resources>();
+
+	// 필요한 메쉬들 생성
+	shared_ptr<CubeMesh> cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
+	shared_ptr<TextureRectMesh> textureRectMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{}) };
+	m_resources->AddMesh("CUBE_MESH", cubeMesh);
+	m_resources->AddMesh("TEXTURE_RECT_MESH", textureRectMesh);
 
 	// 필요한 셰이더들 생성
 	shared_ptr<Shader> shader{ make_shared<Shader>(device, rootSignature) };
 	shared_ptr<TerrainShader> terrainShader{ make_shared<TerrainShader>(device, rootSignature) };
 	shared_ptr<InstanceShader> instanceShader{ make_shared<InstanceShader>(device, rootSignature) };
-
-	// 필요한 메쉬들 생성
-	shared_ptr<CubeMesh> mesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
-	shared_ptr<TextureRectMesh> textureRectMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{}) };
+	m_resources->AddShader("TEXTURE_SHADER", shader);
+	m_resources->AddShader("TERRAIN_SHADER", terrainShader);
+	m_resources->AddShader("INSTANCE_SHADER", instanceShader);
 
 	// 필요한 텍스쳐들 생성
 	shared_ptr<Texture> rockTexture{ make_shared<Texture>() };
@@ -30,6 +64,10 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/DetailTerrain.dds"), 3); // DetailTexture
 	terrainTexture->CreateSrvDescriptorHeap(device);
 	terrainTexture->CreateShaderResourceView(device);
+
+	m_resources->AddTexture("ROCK_TEXTURE", rockTexture);
+	m_resources->AddTexture("TREE_TEXTURE", treeTexture);
+	m_resources->AddTexture("TERRAIN_TEXTURE", terrainTexture);
 
 	// 지형 생성
 	unique_ptr<HeightMapTerrain> terrain{
@@ -57,9 +95,9 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 
 	// 플레이어 생성
 	shared_ptr<Player> player{ make_shared<Player>() };
-	player->SetMesh(mesh);
-	player->SetShader(shader);
-	player->SetTexture(rockTexture);
+	player->SetMesh(m_resources->GetMesh("CUBE_MESH"));
+	player->SetShader(m_resources->GetShader("TEXTURE_SHADER"));
+	player->SetTexture(m_resources->GetTexture("ROCK_TEXTURE"));
 	player->SetCamera(camera);
 
 	// 씬, 카메라 플레이어 설정
@@ -77,13 +115,13 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 		obj->SetPosition(XMFLOAT3{ x, -270.0f, z });
 		instance->AddGameObject(move(obj));
 	}
-	instance->SetMesh(textureRectMesh);
-	instance->SetShader(instanceShader);
-	instance->SetTexture(treeTexture);
+	instance->SetMesh(m_resources->GetMesh("TEXTURE_RECT_MESH"));
+	instance->SetShader(m_resources->GetShader("INSTANCE_SHADER"));
+	instance->SetTexture(m_resources->GetTexture("TREE_TEXTURE"));
 	m_instances.push_back(move(instance));
 }
 
-void Scene::OnMouseEvent(HWND hWnd, UINT width, UINT height, FLOAT deltaTime) const
+void Scene::OnMouseEvent(HWND hWnd, UINT width, UINT height, FLOAT deltaTime)
 {
 	// 화면 가운데 좌표 계산
 	RECT rect; GetWindowRect(hWnd, &rect);
@@ -100,6 +138,16 @@ void Scene::OnMouseEvent(HWND hWnd, UINT width, UINT height, FLOAT deltaTime) co
 
 	// 마우스를 화면 가운데로 이동
 	SetCursorPos(oldMousePosition.x, oldMousePosition.y);
+}
+
+void Scene::OnMouseEvent(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_LBUTTONDOWN:
+		CreateBullet();
+		break;
+	}
 }
 
 void Scene::OnKeyboardEvent(FLOAT deltaTime) const
@@ -222,6 +270,43 @@ void Scene::ReleaseUploadBuffer()
 		gameObject->ReleaseUploadBuffer();
 	for (const auto& instance : m_instances)
 		instance->ReleaseUploadBuffer();
+}
+
+void Scene::CreateBullet()
+{
+	XMFLOAT3 direction{};
+
+	XMFLOAT4X4 worldMatrix{ m_player->GetWorldMatrix() };
+	XMFLOAT3 up{ m_player->GetUp() };
+	XMFLOAT3 normal{ m_player->GetNormal() };
+
+	float theta{ acosf(Vector3::Dot(up, normal)) };
+	if (theta)
+	{
+		XMFLOAT3 right{ Vector3::Normalize(Vector3::Cross(up, normal)) };
+		if (normal.z < 0)
+		{
+			right = Vector3::Mul(right, -1);
+			theta *= -1;
+		}
+		worldMatrix._41 = 0.0f; worldMatrix._42 = 0.0f; worldMatrix._43 = 0.0f;
+
+		XMFLOAT4X4 rotate;
+		XMStoreFloat4x4(&rotate, XMMatrixRotationNormal(XMLoadFloat3(&right), theta));
+		worldMatrix = Matrix::Mul(worldMatrix, rotate);
+
+		direction.x = worldMatrix._31;
+		direction.y = worldMatrix._32;
+		direction.z = worldMatrix._33;
+	}
+
+	unique_ptr<Bullet> bullet{ make_unique<Bullet>(m_player->GetPosition(), direction) };
+	bullet->SetMesh(m_resources->GetMesh("CUBE_MESH"));
+	bullet->SetShader(m_resources->GetShader("TEXTURE_SHADER"));
+	bullet->SetTexture(m_resources->GetTexture("ROCK_TEXTURE"));
+	bullet->SetPosition(m_player->GetPosition());
+	m_gameObjects.push_back(move(bullet));
+	cout << "총알 발사!" << endl;
 }
 
 void Scene::SetSkybox(unique_ptr<Skybox>& skybox)

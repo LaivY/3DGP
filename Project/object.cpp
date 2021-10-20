@@ -51,6 +51,13 @@ void GameObject::UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& c
 	commandList->SetGraphicsRoot32BitConstants(0, 16, &Matrix::Transpose(worldMatrix), 0);
 }
 
+void GameObject::SetFront(const XMFLOAT3& front)
+{
+	XMFLOAT3 newFront{ Vector3::Normalize(front) };
+	XMFLOAT3 newRight{ Vector3::Normalize(Vector3::Cross(XMFLOAT3{ 0.0f, 1.0f, 0.0f }, newFront)) };
+	XMFLOAT3 newUp{ Vector3::Normalize(Vector3::Cross(newFront, newRight)) };
+}
+
 void GameObject::SetPosition(const XMFLOAT3& position)
 {
 	m_worldMatrix._41 = position.x;
@@ -121,4 +128,18 @@ void BillboardObject::SetCamera(const shared_ptr<Camera>& camera)
 {
 	if (m_camera) m_camera.reset();
 	m_camera = camera;
+}
+
+// --------------------------------------
+
+Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, FLOAT speed, FLOAT damage)
+	: m_direction{ direction }, m_speed{ speed }, m_damage{ damage }
+{
+	SetPosition(position);
+}
+
+void Bullet::Update(FLOAT deltaTime)
+{
+	// 총알 진행 방향으로 이동
+	Move(Vector3::Mul(m_direction, m_speed * deltaTime));
 }
