@@ -1,5 +1,13 @@
 #include "scene.h"
 
+void Resources::ReleaseUploadBuffer() const
+{
+	for (auto [_, mesh] : m_meshes)
+		mesh->ReleaseUploadBuffer();
+	for (auto [_, texture] : m_textures)
+		texture->ReleaseUploadBuffer();
+}
+
 shared_ptr<Mesh> Resources::GetMesh(const string& key) const
 {
 	auto value{ m_meshes.find(key) };
@@ -36,8 +44,10 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 
 	// 필요한 메쉬들 생성
 	shared_ptr<CubeMesh> cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
+	shared_ptr<CubeMesh> bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.5f, 0.1f) };
 	shared_ptr<TextureRectMesh> textureRectMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{}) };
 	m_resources->AddMesh("CUBE_MESH", cubeMesh);
+	m_resources->AddMesh("BULLET_MESH", bulletMesh);
 	m_resources->AddMesh("TEXTURE_RECT_MESH", textureRectMesh);
 
 	// 필요한 셰이더들 생성
@@ -266,47 +276,17 @@ void Scene::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
 
 void Scene::ReleaseUploadBuffer()
 {
-	for (const auto& gameObject : m_gameObjects)
-		gameObject->ReleaseUploadBuffer();
-	for (const auto& instance : m_instances)
-		instance->ReleaseUploadBuffer();
+	if (m_resources) m_resources->ReleaseUploadBuffer();
 }
 
 void Scene::CreateBullet()
 {
-	XMFLOAT3 direction{};
-
-	XMFLOAT4X4 worldMatrix{ m_player->GetWorldMatrix() };
-	XMFLOAT3 up{ m_player->GetUp() };
-	XMFLOAT3 normal{ m_player->GetNormal() };
-
-	float theta{ acosf(Vector3::Dot(up, normal)) };
-	if (theta)
-	{
-		XMFLOAT3 right{ Vector3::Normalize(Vector3::Cross(up, normal)) };
-		if (normal.z < 0)
-		{
-			right = Vector3::Mul(right, -1);
-			theta *= -1;
-		}
-		worldMatrix._41 = 0.0f; worldMatrix._42 = 0.0f; worldMatrix._43 = 0.0f;
-
-		XMFLOAT4X4 rotate;
-		XMStoreFloat4x4(&rotate, XMMatrixRotationNormal(XMLoadFloat3(&right), theta));
-		worldMatrix = Matrix::Mul(worldMatrix, rotate);
-
-		direction.x = worldMatrix._31;
-		direction.y = worldMatrix._32;
-		direction.z = worldMatrix._33;
-	}
-
-	unique_ptr<Bullet> bullet{ make_unique<Bullet>(m_player->GetPosition(), direction) };
-	bullet->SetMesh(m_resources->GetMesh("CUBE_MESH"));
+	unique_ptr<Bullet> bullet{ make_unique<Bullet>(m_player->GetPosition(), m_player->GetLook(), m_player->GetNormal()) };
+	bullet->SetMesh(m_resources->GetMesh("BULLET_MESH"));
 	bullet->SetShader(m_resources->GetShader("TEXTURE_SHADER"));
 	bullet->SetTexture(m_resources->GetTexture("ROCK_TEXTURE"));
 	bullet->SetPosition(m_player->GetPosition());
 	m_gameObjects.push_back(move(bullet));
-	cout << "총알 발사!" << endl;
 }
 
 void Scene::SetSkybox(unique_ptr<Skybox>& skybox)

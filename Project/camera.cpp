@@ -132,8 +132,5 @@ void ThirdPersonCamera::Rotate(FLOAT roll, FLOAT pitch, FLOAT yaw)
 	// 항상 플레이어를 바라보도록 설정
 	XMFLOAT3 look{ Vector3::Sub(m_player->GetPosition(), m_eye) };
 	if (Vector3::Length(look))
-	{
-		m_look = look;
-		UpdateLocalAxis();
-	}
+		SetAt(look);
 }

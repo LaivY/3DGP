@@ -13,6 +13,8 @@ public:
 	Resources() = default;
 	~Resources() = default;
 
+	void ReleaseUploadBuffer() const;
+
 	void AddMesh(const string& key, const shared_ptr<Mesh>& mesh) { m_meshes[key] = mesh; }
 	void AddShader(const string& key, const shared_ptr<Shader>& shader) { m_shaders[key] = shader; }
 	void AddTexture(const string& key, const shared_ptr<Texture>& texture) { m_textures[key] = texture; }

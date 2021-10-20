@@ -2,15 +2,9 @@
 #include "camera.h"
 
 GameObject::GameObject() : m_right{ 1.0f, 0.0f, 0.0f }, m_up{ 0.0f, 1.0f, 0.0f }, m_front{ 0.0f, 0.0f, 1.0f },
-						   m_roll{ 0.0f }, m_pitch{ 0.0f }, m_yaw{ 0.0f }, m_terrain{ nullptr }, m_normal{ 0.0f, 1.0f, 0.0f }
+						   m_roll{ 0.0f }, m_pitch{ 0.0f }, m_yaw{ 0.0f }, m_terrain{ nullptr }, m_normal{ 0.0f, 1.0f, 0.0f }, m_look{ 0.0f, 0.0f, 1.0f }
 {
 	XMStoreFloat4x4(&m_worldMatrix, XMMatrixIdentity());
-}
-
-GameObject::~GameObject()
-{
-	if (m_mesh) m_mesh->ReleaseUploadBuffer();
-	if (m_texture) m_texture->ReleaseUploadBuffer();
 }
 
 void GameObject::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
@@ -51,11 +45,11 @@ void GameObject::UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& c
 	commandList->SetGraphicsRoot32BitConstants(0, 16, &Matrix::Transpose(worldMatrix), 0);
 }
 
-void GameObject::SetFront(const XMFLOAT3& front)
+void GameObject::SetWorldMatrix(const XMFLOAT3& right, const XMFLOAT3& up, const XMFLOAT3& look)
 {
-	XMFLOAT3 newFront{ Vector3::Normalize(front) };
-	XMFLOAT3 newRight{ Vector3::Normalize(Vector3::Cross(XMFLOAT3{ 0.0f, 1.0f, 0.0f }, newFront)) };
-	XMFLOAT3 newUp{ Vector3::Normalize(Vector3::Cross(newFront, newRight)) };
+	m_worldMatrix._11 = right.x;	m_worldMatrix._12 = right.y;	m_worldMatrix._13 = right.z;
+	m_worldMatrix._21 = up.x;		m_worldMatrix._22 = up.y;		m_worldMatrix._23 = up.z;
+	m_worldMatrix._31 = look.x;		m_worldMatrix._32 = look.y;		m_worldMatrix._33 = look.z;
 }
 
 void GameObject::SetPosition(const XMFLOAT3& position)
@@ -86,12 +80,6 @@ void GameObject::SetTexture(const shared_ptr<Texture>& texture)
 XMFLOAT3 GameObject::GetPosition() const
 {
 	return XMFLOAT3{ m_worldMatrix._41, m_worldMatrix._42, m_worldMatrix._43 };
-}
-
-void GameObject::ReleaseUploadBuffer() const
-{
-	if (m_mesh) m_mesh->ReleaseUploadBuffer();
-	if (m_texture) m_texture->ReleaseUploadBuffer();
 }
 
 // --------------------------------------
@@ -132,10 +120,14 @@ void BillboardObject::SetCamera(const shared_ptr<Camera>& camera)
 
 // --------------------------------------
 
-Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, FLOAT speed, FLOAT damage)
+Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, const XMFLOAT3& up, FLOAT speed, FLOAT damage)
 	: m_direction{ direction }, m_speed{ speed }, m_damage{ damage }
 {
 	SetPosition(position);
+
+	XMFLOAT3 look{ Vector3::Normalize(m_direction) };
+	XMFLOAT3 right{ Vector3::Normalize(Vector3::Cross(up, look)) };
+	SetWorldMatrix(right, up, look);
 }
 
 void Bullet::Update(FLOAT deltaTime)

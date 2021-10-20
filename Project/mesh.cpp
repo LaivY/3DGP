@@ -76,7 +76,7 @@ CubeMesh::CubeMesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	// 큐브 가로, 세로, 높이
-	FLOAT sx{ width }, sy{ length }, sz{ height };
+	FLOAT sx{ width }, sz{ length }, sy{ height };
 
 	// 앞면
 	vector<TextureVertex> vertices;
