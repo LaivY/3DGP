@@ -1,8 +1,9 @@
 #include "object.h"
 #include "camera.h"
 
-GameObject::GameObject() : m_right{ 1.0f, 0.0f, 0.0f }, m_up{ 0.0f, 1.0f, 0.0f }, m_front{ 0.0f, 0.0f, 1.0f }, m_roll{ 0.0f }, m_pitch{ 0.0f }, m_yaw{ 0.0f },
-						   m_terrain{ nullptr }, m_normal{ 0.0f, 1.0f, 0.0f }, m_look{ 0.0f, 0.0f, 1.0f }, m_isDeleted{ FALSE }
+GameObject::GameObject() : m_type{ GameObjectType::DEFAULT }, m_right { 1.0f, 0.0f, 0.0f }, m_up{ 0.0f, 1.0f, 0.0f }, m_front{ 0.0f, 0.0f, 1.0f },
+						   m_roll{ 0.0f }, m_pitch{ 0.0f }, m_yaw{ 0.0f }, m_terrain{ nullptr }, m_normal{ 0.0f, 1.0f, 0.0f }, m_look{ 0.0f, 0.0f, 1.0f },
+						   m_isDeleted{ FALSE }, m_textureInfo{ nullptr }, m_checkTerrain{ true }
 {
 	XMStoreFloat4x4(&m_worldMatrix, XMMatrixIdentity());
 }
@@ -14,10 +15,36 @@ void GameObject::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) co
 
 	// 셰이더 변수 최신화
 	UpdateShaderVariable(commandList);
-	if (m_texture) m_texture->UpdateShaderVariable(commandList);
+	if (m_texture)
+	{
+		if (m_textureInfo) m_texture->SetTextureInfo(m_textureInfo.get());		
+		m_texture->UpdateShaderVariable(commandList);
+	}
 
 	// 렌더링
 	if (m_mesh) m_mesh->Render(commandList);
+}
+
+void GameObject::Update(FLOAT deltaTime)
+{
+	if (m_texture && m_textureInfo)
+	{
+		m_textureInfo->frameTimer += deltaTime;
+		if (m_textureInfo->frameTimer > m_textureInfo->frameInterver)
+		{
+			m_textureInfo->frame += static_cast<int>(m_textureInfo->frameTimer / m_textureInfo->frameInterver);
+			m_textureInfo->frameTimer = fmod(m_textureInfo->frameTimer, m_textureInfo->frameInterver);
+		}
+		if (m_textureInfo->frame >= m_texture->GetTextureCount())
+		{
+			if (m_textureInfo->isFrameRepeat) m_textureInfo->frame = 0;
+			else
+			{
+				m_textureInfo->frame = m_texture->GetTextureCount() - 1;
+				m_isDeleted = true;
+			}
+		}
+	}
 }
 
 void GameObject::Move(const XMFLOAT3& shift)
@@ -77,6 +104,11 @@ void GameObject::SetTexture(const shared_ptr<Texture>& texture)
 	m_texture = texture;
 }
 
+void GameObject::SetTextureInfo(unique_ptr<TextureInfo>& textureInfo)
+{
+	m_textureInfo = move(textureInfo);
+}
+
 XMFLOAT3 GameObject::GetPosition() const
 {
 	return XMFLOAT3{ m_worldMatrix._41, m_worldMatrix._42, m_worldMatrix._43 };
@@ -86,11 +118,13 @@ XMFLOAT3 GameObject::GetPosition() const
 
 BillboardObject::BillboardObject(const shared_ptr<Camera>& camera) : GameObject{}, m_camera{ camera }
 {
-
+	m_type = GameObjectType::BILLBOARD;
 }
 
 void BillboardObject::Update(FLOAT deltaTime)
 {
+	GameObject::Update(deltaTime);
+
 	XMFLOAT3 pos{ GetPosition() };			// 빌보드 객체의 위치
 	XMFLOAT3 target{ m_camera->GetEye() };	// 봐야할 곳
 
@@ -123,6 +157,8 @@ void BillboardObject::SetCamera(const shared_ptr<Camera>& camera)
 Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, const XMFLOAT3& up, FLOAT speed, FLOAT damage)
 	: m_origin{ position }, m_direction{ direction }, m_speed{ speed }, m_damage{ damage }
 {
+	m_type = GameObjectType::BULLET;
+
 	SetPosition(position);
 
 	XMFLOAT3 look{ Vector3::Normalize(m_direction) };
@@ -132,6 +168,8 @@ Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, const XMFLOA
 
 void Bullet::Update(FLOAT deltaTime)
 {
+	GameObject::Update(deltaTime);
+
 	// 일정 거리 날아가면 삭제
 	if (Vector3::Length(Vector3::Sub(GetPosition(), m_origin)) > 100.0f)
 		m_isDeleted = true;

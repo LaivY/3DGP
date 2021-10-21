@@ -5,6 +5,10 @@
 #include "terrain.h"
 #include "texture.h"
 
+enum class GameObjectType {
+	DEFAULT, BILLBOARD, BULLET
+};
+
 class Camera;
 
 class GameObject
@@ -14,18 +18,21 @@ public:
 	~GameObject() = default;
 
 	virtual void Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const;
-	virtual void Update(FLOAT deltaTime) { }
+	virtual void Update(FLOAT deltaTime);
 	virtual void Move(const XMFLOAT3& shift);
 	virtual void Rotate(FLOAT roll, FLOAT pitch, FLOAT yaw);
 	virtual void UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& commandList) const;
 
 	void SetWorldMatrix(const XMFLOAT3& right, const XMFLOAT3& up, const XMFLOAT3& look);
 	void SetPosition(const XMFLOAT3& position);
+	void SetTerrain(HeightMapTerrain* terrain) { m_terrain = terrain; }
 	void SetMesh(const shared_ptr<Mesh>& mesh);
 	void SetShader(const shared_ptr<Shader>& shader);
 	void SetTexture(const shared_ptr<Texture>& texture);
-	void SetTerrain(HeightMapTerrain* terrain) { m_terrain = terrain; }
+	void SetTextureInfo(unique_ptr<TextureInfo>& textureInfo);
+	void SetCheckTerrain(bool checkTerrain) { m_checkTerrain = checkTerrain; }
 
+	GameObjectType GetType() const { return m_type; }
 	XMFLOAT4X4 GetWorldMatrix() const { return m_worldMatrix; }
 	XMFLOAT3 GetPosition() const;
 	XMFLOAT3 GetRight() const { return m_right; }
@@ -35,8 +42,11 @@ public:
 	XMFLOAT3 GetNormal() const { return m_normal; }
 	XMFLOAT3 GetLook() const { return m_look; }
 	bool GetIsDeleted() const { return m_isDeleted; }
+	bool GetCheckTerrain() const { return m_checkTerrain; }
 
 protected:
+	GameObjectType			m_type;			// 필요할 때 캐스팅하기 위한 객체 타입
+
 	XMFLOAT4X4				m_worldMatrix;	// 월드 변환
 
 	XMFLOAT3				m_right;		// 로컬 x축
@@ -50,11 +60,14 @@ protected:
 	HeightMapTerrain*		m_terrain;		// 서있는 지형의 포인터
 	XMFLOAT3				m_normal;		// 서있는 지형의 노멀 벡터
 	XMFLOAT3				m_look;			// 지형이 적용된 정면
-	bool					m_isDeleted;	// TRUE일 경우 삭제될 객체임
+	bool					m_checkTerrain; // true일 경우 어느 지형 위에 있는지 확인함
+
+	bool					m_isDeleted;	// true일 경우 삭제될 객체임
 
 	shared_ptr<Mesh>		m_mesh;			// 메쉬
 	shared_ptr<Shader>		m_shader;		// 셰이더
 	shared_ptr<Texture>		m_texture;		// 텍스쳐
+	unique_ptr<TextureInfo>	m_textureInfo;	// 텍스쳐 애니메이션을 위한 구조체
 };
 
 class BillboardObject : public GameObject
@@ -79,8 +92,8 @@ public:
 	virtual void Update(FLOAT deltaTime);
 
 private:
-	XMFLOAT3	m_origin;		// 발사 시작 위치
-	XMFLOAT3	m_direction;	// 날아가는 방향
-	FLOAT		m_speed;		// 날아가는 속도
-	FLOAT		m_damage;		// 피해량
+	XMFLOAT3	m_origin;		 // 발사 시작 위치
+	XMFLOAT3	m_direction;	 // 날아가는 방향
+	FLOAT		m_speed;		 // 날아가는 속도
+	FLOAT		m_damage;		 // 피해량
 };

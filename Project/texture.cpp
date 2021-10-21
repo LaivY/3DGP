@@ -65,12 +65,20 @@ void Texture::UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& comm
 {
 	ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	D3D12_GPU_DESCRIPTOR_HANDLE srvDescriptorHandle{ m_srvHeap->GetGPUDescriptorHandleForHeapStart() };
 
-	D3D12_GPU_DESCRIPTOR_HANDLE srvDescriptorHeapStart{ m_srvHeap->GetGPUDescriptorHandleForHeapStart() };
-	for (const auto& [_, rootParameterIndex] : m_textures)
+	if (m_textureInfo)
 	{
-		commandList->SetGraphicsRootDescriptorTable(rootParameterIndex, srvDescriptorHeapStart);
-		srvDescriptorHeapStart.ptr += g_cbvSrvDescriptorIncrementSize;
+		srvDescriptorHandle.ptr += g_cbvSrvDescriptorIncrementSize * m_textureInfo->frame;
+		commandList->SetGraphicsRootDescriptorTable(m_textures[m_textureInfo->frame].second, srvDescriptorHandle);
+	}
+	else
+	{
+		for (const auto& [_, rootParameterIndex] : m_textures)
+		{
+			commandList->SetGraphicsRootDescriptorTable(rootParameterIndex, srvDescriptorHandle);
+			srvDescriptorHandle.ptr += g_cbvSrvDescriptorIncrementSize;
+		}
 	}
 }
 

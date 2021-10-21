@@ -7,11 +7,11 @@
 #include "skybox.h"
 #include "terrain.h"
 
-class Resources
+class ResourceManager
 {
 public:
-	Resources() = default;
-	~Resources() = default;
+	ResourceManager() = default;
+	~ResourceManager() = default;
 
 	void ReleaseUploadBuffer() const;
 
@@ -49,6 +49,7 @@ public:
 	void ReleaseUploadBuffer();
 
 	void CreateBullet();
+	void CreateExplosion();
 
 	void SetSkybox(unique_ptr<Skybox>& skybox);
 	void SetPlayer(const shared_ptr<Player>& player);
@@ -60,7 +61,7 @@ public:
 	HeightMapTerrain* GetTerrain(FLOAT x, FLOAT z) const;
 
 private:
-	unique_ptr<Resources>					m_resources; // 메쉬, 셰이더, 텍스쳐들을 보관하고 있는 클래스
+	unique_ptr<ResourceManager>				m_resourceManager; // 메쉬, 셰이더, 텍스쳐들을 보관해주는 객체
 
 	vector<unique_ptr<GameObject>>			m_gameObjects;
 	vector<unique_ptr<Instance>>			m_instances;

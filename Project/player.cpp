@@ -8,6 +8,8 @@ Player::Player() : GameObject{}, m_velocity{ 0.0f, 0.0f, 0.0f }, m_maxVelocity{ 
 
 void Player::Update(FLOAT deltaTime)
 {
+	GameObject::Update(deltaTime);
+
 	// ¿Ãµø
 	Move(m_velocity);
 

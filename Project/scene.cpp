@@ -1,6 +1,6 @@
 #include "scene.h"
 
-void Resources::ReleaseUploadBuffer() const
+void ResourceManager::ReleaseUploadBuffer() const
 {
 	for (auto [_, mesh] : m_meshes)
 		mesh->ReleaseUploadBuffer();
@@ -8,7 +8,7 @@ void Resources::ReleaseUploadBuffer() const
 		texture->ReleaseUploadBuffer();
 }
 
-shared_ptr<Mesh> Resources::GetMesh(const string& key) const
+shared_ptr<Mesh> ResourceManager::GetMesh(const string& key) const
 {
 	auto value{ m_meshes.find(key) };
 	if (value == m_meshes.end())
@@ -16,7 +16,7 @@ shared_ptr<Mesh> Resources::GetMesh(const string& key) const
 	return value->second;
 }
 
-shared_ptr<Shader> Resources::GetShader(const string& key) const
+shared_ptr<Shader> ResourceManager::GetShader(const string& key) const
 {
 	auto value{ m_shaders.find(key) };
 	if (value == m_shaders.end())
@@ -24,7 +24,7 @@ shared_ptr<Shader> Resources::GetShader(const string& key) const
 	return value->second;
 }
 
-shared_ptr<Texture> Resources::GetTexture(const string& key) const
+shared_ptr<Texture> ResourceManager::GetTexture(const string& key) const
 {
 	auto value{ m_textures.find(key) };
 	if (value == m_textures.end())
@@ -36,12 +36,12 @@ shared_ptr<Texture> Resources::GetTexture(const string& key) const
 
 void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const ComPtr<ID3D12RootSignature>& rootSignature, FLOAT aspectRatio)
 {
-	// 메쉬, 셰이더, 텍스쳐들은 모두 Resources에 있는 map에 담는다.
-	// Resources::Add??? 함수를 통해 리소스를 추가하고 Resources::Get??? 함수를 통해 리소스를 불러올 수 있다.
-	// class Resources가 있으므로서 나중에 객체를 생성할 때 필요한 Mesh, Shader, Texture를 미리 생성해둘 수 있다.
+	// 메쉬, 셰이더, 텍스쳐들은 모두 ResourceManager에 있는 map에 담는다.
+	// ResourceManager::Add??? 함수를 통해 리소스를 추가하고 ResourceManager::Get??? 함수를 통해 리소스를 불러올 수 있다.
+	// class ResourceManager가 있으므로서 나중에 객체를 생성할 때 필요한 Mesh, Shader, Texture를 미리 생성해둘 수 있다.
 
-	// 리소스들 담고있을 m_resources 생성
-	m_resources = make_unique<Resources>();
+	// 리소스들 담고있을 ResourceManager 생성
+	m_resourceManager = make_unique<ResourceManager>();
 
 	// 필요한 메쉬들 생성
 	shared_ptr<CubeMesh> cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
@@ -70,18 +70,25 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	terrainTexture->CreateSrvDescriptorHeap(device);
 	terrainTexture->CreateShaderResourceView(device);
 
+	shared_ptr<Texture> explosionTexture{ make_shared<Texture>() };
+	for (int i = 1; i <= 33; ++i)
+		explosionTexture->LoadTextureFile(device, commandList, TEXT("resource/explosion (") + to_wstring(i) + TEXT(").dds"), 2);
+	explosionTexture->CreateSrvDescriptorHeap(device);
+	explosionTexture->CreateShaderResourceView(device);
+
 	// 리소스 보관 객체에 저장
-	m_resources->AddMesh("CUBE_MESH", cubeMesh);
-	m_resources->AddMesh("BULLET_MESH", bulletMesh);
-	m_resources->AddMesh("TEXTURE_RECT_MESH", textureRectMesh);
+	m_resourceManager->AddMesh("CUBE_MESH", cubeMesh);
+	m_resourceManager->AddMesh("BULLET_MESH", bulletMesh);
+	m_resourceManager->AddMesh("TEXTURE_RECT_MESH", textureRectMesh);
 
-	m_resources->AddShader("TEXTURE_SHADER", textureShader);
-	m_resources->AddShader("TERRAIN_SHADER", terrainShader);
-	m_resources->AddShader("INSTANCE_SHADER", instanceShader);
+	m_resourceManager->AddShader("TEXTURE_SHADER", textureShader);
+	m_resourceManager->AddShader("TERRAIN_SHADER", terrainShader);
+	m_resourceManager->AddShader("INSTANCE_SHADER", instanceShader);
 
-	m_resources->AddTexture("ROCK_TEXTURE", rockTexture);
-	m_resources->AddTexture("TREE_TEXTURE", treeTexture);
-	m_resources->AddTexture("TERRAIN_TEXTURE", terrainTexture);
+	m_resourceManager->AddTexture("ROCK_TEXTURE", rockTexture);
+	m_resourceManager->AddTexture("TREE_TEXTURE", treeTexture);
+	m_resourceManager->AddTexture("TERRAIN_TEXTURE", terrainTexture);
+	m_resourceManager->AddTexture("EXPLOSION_TEXTURE", explosionTexture);
 
 	// 지형 생성
 	unique_ptr<HeightMapTerrain> terrain{
@@ -109,9 +116,9 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 
 	// 플레이어 생성
 	shared_ptr<Player> player{ make_shared<Player>() };
-	player->SetMesh(m_resources->GetMesh("CUBE_MESH"));
-	player->SetShader(m_resources->GetShader("TEXTURE_SHADER"));
-	player->SetTexture(m_resources->GetTexture("ROCK_TEXTURE"));
+	player->SetMesh(m_resourceManager->GetMesh("CUBE_MESH"));
+	player->SetShader(m_resourceManager->GetShader("TEXTURE_SHADER"));
+	player->SetTexture(m_resourceManager->GetTexture("ROCK_TEXTURE"));
 	player->SetCamera(camera);
 
 	// 씬, 카메라 플레이어 설정
@@ -129,9 +136,9 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 		obj->SetPosition(XMFLOAT3{ x, -270.0f, z });
 		instance->AddGameObject(move(obj));
 	}
-	instance->SetMesh(m_resources->GetMesh("TEXTURE_RECT_MESH"));
-	instance->SetShader(m_resources->GetShader("INSTANCE_SHADER"));
-	instance->SetTexture(m_resources->GetTexture("TREE_TEXTURE"));
+	instance->SetMesh(m_resourceManager->GetMesh("TEXTURE_RECT_MESH"));
+	instance->SetShader(m_resourceManager->GetShader("INSTANCE_SHADER"));
+	instance->SetTexture(m_resourceManager->GetTexture("TREE_TEXTURE"));
 	m_instances.push_back(move(instance));
 }
 
@@ -212,8 +219,27 @@ void Scene::Update(FLOAT deltaTime)
 
 void Scene::RemoveDeletedGameObjects()
 {
+	vector<unique_ptr<GameObject>> willBeAdded;
+
 	// m_isDeleted가 true인 객체들을 삭제한다.
-	auto pred = [](unique_ptr<GameObject>& object) {
+	auto pred = [this, &willBeAdded](unique_ptr<GameObject>& object) {
+
+		// 삭제한 오브젝트가 총알이라면 그 자리에 폭발이펙트 생성
+		if (object->GetIsDeleted() && object->GetType() == GameObjectType::BULLET)
+		{
+			unique_ptr<BillboardObject> explosion{ make_unique<BillboardObject>(m_camera) };
+			explosion->SetMesh(m_resourceManager->GetMesh("TEXTURE_RECT_MESH"));
+			explosion->SetShader(m_resourceManager->GetShader("TEXTURE_SHADER"));
+			explosion->SetTexture(m_resourceManager->GetTexture("EXPLOSION_TEXTURE"));
+			unique_ptr<TextureInfo> textureInfo{ make_unique<TextureInfo>() };
+			textureInfo->frameInterver *= 1.5f;
+			textureInfo->isFrameRepeat = false;
+			explosion->SetTextureInfo(textureInfo);
+			explosion->SetPosition(object->GetPosition());
+			explosion->SetCheckTerrain(false);
+			willBeAdded.push_back(move(explosion));
+		}
+
 		return object->GetIsDeleted();
 	};
 	m_gameObjects.erase(remove_if(m_gameObjects.begin(), m_gameObjects.end(), pred), m_gameObjects.end());
@@ -223,6 +249,9 @@ void Scene::RemoveDeletedGameObjects()
 		vector<unique_ptr<GameObject>>& gameObjects{ instance->GetGameObjects() };
 		gameObjects.erase(remove_if(gameObjects.begin(), gameObjects.end(), pred), gameObjects.end());
 	}
+
+	for (auto& object : willBeAdded)
+		m_gameObjects.push_back(move(object));
 }
 
 void Scene::UpdateGameObjectsTerrain()
@@ -264,6 +293,8 @@ void Scene::UpdateGameObjectsTerrain()
 	}
 	for (auto& object : m_gameObjects)
 	{
+		if (!object->GetCheckTerrain()) continue;
+
 		pos = object->GetPosition();
 		auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
 		object->SetTerrain(terrain != m_terrains.end() ? terrain->get() : nullptr);
@@ -304,15 +335,15 @@ void Scene::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
 
 void Scene::ReleaseUploadBuffer()
 {
-	if (m_resources) m_resources->ReleaseUploadBuffer();
+	if (m_resourceManager) m_resourceManager->ReleaseUploadBuffer();
 }
 
 void Scene::CreateBullet()
 {
 	unique_ptr<Bullet> bullet{ make_unique<Bullet>(m_player->GetPosition(), m_player->GetLook(), m_player->GetNormal()) };
-	bullet->SetMesh(m_resources->GetMesh("BULLET_MESH"));
-	bullet->SetShader(m_resources->GetShader("TEXTURE_SHADER"));
-	bullet->SetTexture(m_resources->GetTexture("ROCK_TEXTURE"));
+	bullet->SetMesh(m_resourceManager->GetMesh("BULLET_MESH"));
+	bullet->SetShader(m_resourceManager->GetShader("TEXTURE_SHADER"));
+	bullet->SetTexture(m_resourceManager->GetTexture("ROCK_TEXTURE"));
 	bullet->SetPosition(m_player->GetPosition());
 	m_gameObjects.push_back(move(bullet));
 }
