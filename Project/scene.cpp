@@ -38,6 +38,7 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 {
 	// 메쉬, 셰이더, 텍스쳐들은 모두 Resources에 있는 map에 담는다.
 	// Resources::Add??? 함수를 통해 리소스를 추가하고 Resources::Get??? 함수를 통해 리소스를 불러올 수 있다.
+	// class Resources가 있으므로서 나중에 객체를 생성할 때 필요한 Mesh, Shader, Texture를 미리 생성해둘 수 있다.
 
 	// 리소스들 담고있을 m_resources 생성
 	m_resources = make_unique<Resources>();
@@ -46,17 +47,11 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	shared_ptr<CubeMesh> cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
 	shared_ptr<CubeMesh> bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.5f, 0.1f) };
 	shared_ptr<TextureRectMesh> textureRectMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{}) };
-	m_resources->AddMesh("CUBE_MESH", cubeMesh);
-	m_resources->AddMesh("BULLET_MESH", bulletMesh);
-	m_resources->AddMesh("TEXTURE_RECT_MESH", textureRectMesh);
 
 	// 필요한 셰이더들 생성
-	shared_ptr<Shader> shader{ make_shared<Shader>(device, rootSignature) };
+	shared_ptr<TextureShader> textureShader{ make_shared<TextureShader>(device, rootSignature) };
 	shared_ptr<TerrainShader> terrainShader{ make_shared<TerrainShader>(device, rootSignature) };
 	shared_ptr<InstanceShader> instanceShader{ make_shared<InstanceShader>(device, rootSignature) };
-	m_resources->AddShader("TEXTURE_SHADER", shader);
-	m_resources->AddShader("TERRAIN_SHADER", terrainShader);
-	m_resources->AddShader("INSTANCE_SHADER", instanceShader);
 
 	// 필요한 텍스쳐들 생성
 	shared_ptr<Texture> rockTexture{ make_shared<Texture>() };
@@ -74,6 +69,15 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/DetailTerrain.dds"), 3); // DetailTexture
 	terrainTexture->CreateSrvDescriptorHeap(device);
 	terrainTexture->CreateShaderResourceView(device);
+
+	// 리소스 보관 객체에 저장
+	m_resources->AddMesh("CUBE_MESH", cubeMesh);
+	m_resources->AddMesh("BULLET_MESH", bulletMesh);
+	m_resources->AddMesh("TEXTURE_RECT_MESH", textureRectMesh);
+
+	m_resources->AddShader("TEXTURE_SHADER", textureShader);
+	m_resources->AddShader("TERRAIN_SHADER", terrainShader);
+	m_resources->AddShader("INSTANCE_SHADER", instanceShader);
 
 	m_resources->AddTexture("ROCK_TEXTURE", rockTexture);
 	m_resources->AddTexture("TREE_TEXTURE", treeTexture);
@@ -202,6 +206,30 @@ void Scene::OnUpdate(FLOAT deltaTime)
 
 void Scene::Update(FLOAT deltaTime)
 {
+	RemoveDeletedGameObjects();
+	UpdateGameObjectsTerrain();
+}
+
+void Scene::RemoveDeletedGameObjects()
+{
+	// m_isDeleted가 true인 객체들을 삭제한다.
+	auto pred = [](unique_ptr<GameObject>& object) {
+		return object->GetIsDeleted();
+	};
+	m_gameObjects.erase(remove_if(m_gameObjects.begin(), m_gameObjects.end(), pred), m_gameObjects.end());
+	
+	for (auto& instance : m_instances)
+	{
+		vector<unique_ptr<GameObject>>& gameObjects{ instance->GetGameObjects() };
+		gameObjects.erase(remove_if(gameObjects.begin(), gameObjects.end(), pred), gameObjects.end());
+	}
+}
+
+void Scene::UpdateGameObjectsTerrain()
+{
+	// 지형이 여러개일 수 있다는 것을 고려했기 때문에
+	// 게임오브젝트들이 어느 지형 위에 있는지 설정해준다.
+
 	XMFLOAT3 pos{};
 	auto pred = [&pos](unique_ptr<HeightMapTerrain>& terrain) {
 		XMFLOAT3 tPos{ terrain->GetPosition() };

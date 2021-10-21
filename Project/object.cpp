@@ -1,8 +1,8 @@
 #include "object.h"
 #include "camera.h"
 
-GameObject::GameObject() : m_right{ 1.0f, 0.0f, 0.0f }, m_up{ 0.0f, 1.0f, 0.0f }, m_front{ 0.0f, 0.0f, 1.0f },
-						   m_roll{ 0.0f }, m_pitch{ 0.0f }, m_yaw{ 0.0f }, m_terrain{ nullptr }, m_normal{ 0.0f, 1.0f, 0.0f }, m_look{ 0.0f, 0.0f, 1.0f }
+GameObject::GameObject() : m_right{ 1.0f, 0.0f, 0.0f }, m_up{ 0.0f, 1.0f, 0.0f }, m_front{ 0.0f, 0.0f, 1.0f }, m_roll{ 0.0f }, m_pitch{ 0.0f }, m_yaw{ 0.0f },
+						   m_terrain{ nullptr }, m_normal{ 0.0f, 1.0f, 0.0f }, m_look{ 0.0f, 0.0f, 1.0f }, m_isDeleted{ FALSE }
 {
 	XMStoreFloat4x4(&m_worldMatrix, XMMatrixIdentity());
 }
@@ -121,7 +121,7 @@ void BillboardObject::SetCamera(const shared_ptr<Camera>& camera)
 // --------------------------------------
 
 Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, const XMFLOAT3& up, FLOAT speed, FLOAT damage)
-	: m_direction{ direction }, m_speed{ speed }, m_damage{ damage }
+	: m_origin{ position }, m_direction{ direction }, m_speed{ speed }, m_damage{ damage }
 {
 	SetPosition(position);
 
@@ -132,6 +132,21 @@ Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, const XMFLOA
 
 void Bullet::Update(FLOAT deltaTime)
 {
+	// 일정 거리 날아가면 삭제
+	if (Vector3::Length(Vector3::Sub(GetPosition(), m_origin)) > 100.0f)
+		m_isDeleted = true;
+
+	// 지형에 닿으면 삭제
+	if (m_terrain)
+	{
+		XMFLOAT3 position{ GetPosition() };
+		if (position.y < m_terrain->GetHeight(position.x, position.z))
+			m_isDeleted = true;
+	}
+
+	// 삭제될 객체는 업데이트할 필요 없음
+	if (m_isDeleted) return;
+
 	// 총알 진행 방향으로 이동
 	Move(Vector3::Mul(m_direction, m_speed * deltaTime));
 }

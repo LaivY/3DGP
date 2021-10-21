@@ -33,7 +33,8 @@ public:
 	XMFLOAT3 GetFront() const { return m_front; }
 	HeightMapTerrain* GetTerrain() const { return m_terrain; }
 	XMFLOAT3 GetNormal() const { return m_normal; }
-	XMFLOAT3 GetLook() const { return m_look; }	
+	XMFLOAT3 GetLook() const { return m_look; }
+	bool GetIsDeleted() const { return m_isDeleted; }
 
 protected:
 	XMFLOAT4X4				m_worldMatrix;	// 월드 변환
@@ -49,6 +50,7 @@ protected:
 	HeightMapTerrain*		m_terrain;		// 서있는 지형의 포인터
 	XMFLOAT3				m_normal;		// 서있는 지형의 노멀 벡터
 	XMFLOAT3				m_look;			// 지형이 적용된 정면
+	bool					m_isDeleted;	// TRUE일 경우 삭제될 객체임
 
 	shared_ptr<Mesh>		m_mesh;			// 메쉬
 	shared_ptr<Shader>		m_shader;		// 셰이더
@@ -77,6 +79,7 @@ public:
 	virtual void Update(FLOAT deltaTime);
 
 private:
+	XMFLOAT3	m_origin;		// 발사 시작 위치
 	XMFLOAT3	m_direction;	// 날아가는 방향
 	FLOAT		m_speed;		// 날아가는 속도
 	FLOAT		m_damage;		// 피해량

@@ -1,35 +1,33 @@
 #pragma once
 #include "stdafx.h"
 
-class Vertex
+struct Vertex
 {
-public:
 	Vertex(const XMFLOAT3& position) : m_position{ position } { }
-	~Vertex() = default;
 
-protected:
 	XMFLOAT3 m_position;
 };
 
-class TextureVertex : public Vertex
+struct ColorVertex : Vertex
 {
-public:
-	TextureVertex(const XMFLOAT3& position, const XMFLOAT2& uv) : Vertex{ position }, m_uv{ uv } { }
-	~TextureVertex() = default;
+	ColorVertex(const XMFLOAT3& position, const XMFLOAT3& color) : Vertex{ position }, m_color{ color } { }
 
-private:
+	XMFLOAT3 m_color;
+};
+
+struct TextureVertex : Vertex
+{
+	TextureVertex(const XMFLOAT3& position, const XMFLOAT2& uv) : Vertex{ position }, m_uv{ uv } { }
+
 	XMFLOAT2 m_uv;
 };
 
-class Texture2Vertex : public Vertex
+struct Texture2Vertex : Vertex
 {
-public:
-	Texture2Vertex(const XMFLOAT3& position, const XMFLOAT2& uv1, const XMFLOAT2& uv2) : Vertex{ position }, m_uv1{ uv1 }, m_uv2{ uv2 } { };
-	~Texture2Vertex() = default;
+	Texture2Vertex(const XMFLOAT3& position, const XMFLOAT2& uv0, const XMFLOAT2& uv1) : Vertex{ position }, m_uv0{ uv0 }, m_uv1{ uv1 } { };
 
-private:
+	XMFLOAT2 m_uv0;
 	XMFLOAT2 m_uv1;
-	XMFLOAT2 m_uv2;
 };
 
 class Mesh

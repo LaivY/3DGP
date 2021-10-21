@@ -42,6 +42,9 @@ public:
 	void OnUpdate(FLOAT deltaTime);
 
 	void Update(FLOAT deltaTime);
+	void RemoveDeletedGameObjects();
+	void UpdateGameObjectsTerrain();
+
 	void Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const;
 	void ReleaseUploadBuffer();
 

@@ -14,10 +14,22 @@ cbuffer cbCamera : register(b1)
 struct VSInput
 {
     float4 position : POSITION;
-    float2 uv : TEXCOORD;
+    float4 color : COLOR;
 };
 
 struct VSOutput
+{
+    float4 position : SV_POSITION;
+    float4 color : COLOR;
+};
+
+struct VSTextureInput
+{
+    float4 position : POSITION;
+    float2 uv : TEXCOORD;
+};
+
+struct VSTextureOutput
 {
     float4 position : SV_POSITION;
     float2 uv : TEXCOORD;
@@ -64,12 +76,29 @@ VSOutput VSMain(VSInput input)
     output.position = mul(input.position, worldMatrix);
     output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projMatrix);
-    output.uv = input.uv;
+    output.color = input.color;
     return output;
 }
 
 float4 PSMain(VSOutput input) : SV_TARGET
 {
+    return input.color;
+}
+
+// --------------------------------------
+
+VSTextureOutput VSTextureMain(VSTextureInput input)
+{
+    VSTextureOutput output;
+    output.position = mul(input.position, worldMatrix);
+    output.position = mul(output.position, viewMatrix);
+    output.position = mul(output.position, projMatrix);
+    output.uv = input.uv;
+    return output;
+}
+
+float4 PSTextureMain(VSTextureOutput input) : SV_TARGET
+{   
     float4 color = g_texture.Sample(g_sampler, input.uv);
     if (color.a == 0.0f)
         discard;
