@@ -27,14 +27,20 @@ void GameObject::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) co
 
 void GameObject::Update(FLOAT deltaTime)
 {
+	// 텍스쳐와 텍스쳐 정보가 있다면
 	if (m_texture && m_textureInfo)
 	{
+		// 텍스쳐 프레임 증가
 		m_textureInfo->frameTimer += deltaTime;
+
+		// frameTimer가 frameInterver보다 크다면 1프레임 증가
 		if (m_textureInfo->frameTimer > m_textureInfo->frameInterver)
 		{
 			m_textureInfo->frame += static_cast<int>(m_textureInfo->frameTimer / m_textureInfo->frameInterver);
 			m_textureInfo->frameTimer = fmod(m_textureInfo->frameTimer, m_textureInfo->frameInterver);
 		}
+
+		// 마지막 프레임일 경우 0프레임으로 만들어서 반복하거나 반복하지 않을 경우엔 해당 오브젝트 삭제
 		if (m_textureInfo->frame >= m_texture->GetTextureCount())
 		{
 			if (m_textureInfo->isFrameRepeat) m_textureInfo->frame = 0;

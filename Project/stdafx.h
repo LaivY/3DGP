@@ -13,8 +13,11 @@
 #include <tchar.h>
 #include <wrl.h>
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <exception>
+#include <string>
+#include <sstream>
 #include <vector>
 #include <map>
 using namespace std;

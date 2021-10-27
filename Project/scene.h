@@ -49,7 +49,7 @@ public:
 	void ReleaseUploadBuffer();
 
 	void CreateBullet();
-	void CreateExplosion();
+	void CreateExplosion() { }
 
 	void SetSkybox(unique_ptr<Skybox>& skybox);
 	void SetPlayer(const shared_ptr<Player>& player);

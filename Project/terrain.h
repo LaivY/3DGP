@@ -1,5 +1,4 @@
 #pragma once
-#include <fstream>
 #include "stdafx.h"
 #include "mesh.h"
 #include "shader.h"

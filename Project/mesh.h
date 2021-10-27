@@ -10,9 +10,9 @@ struct Vertex
 
 struct ColorVertex : Vertex
 {
-	ColorVertex(const XMFLOAT3& position, const XMFLOAT3& color) : Vertex{ position }, m_color{ color } { }
+	ColorVertex(const XMFLOAT3& position, const XMFLOAT4& color) : Vertex{ position }, m_color{ color } { }
 
-	XMFLOAT3 m_color;
+	XMFLOAT4 m_color;
 };
 
 struct TextureVertex : Vertex
@@ -36,6 +36,7 @@ public:
 	Mesh() = default;
 	Mesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList,
 		void* vertexData, UINT sizePerVertexData, UINT vertexDataCount, void* indexData, UINT indexDataCount, D3D_PRIMITIVE_TOPOLOGY primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	Mesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const string& fileName, D3D_PRIMITIVE_TOPOLOGY primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	~Mesh() = default;
 
 	void Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const;

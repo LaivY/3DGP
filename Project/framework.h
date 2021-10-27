@@ -1,6 +1,4 @@
 #pragma once
-#include <fstream>
-#include <string>
 #include "stdafx.h"
 #include "object.h"
 #include "camera.h"

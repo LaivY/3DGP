@@ -19,7 +19,7 @@ void Player::Update(FLOAT deltaTime)
 		// 플레이어가 지형 위를 이동하도록
 		XMFLOAT3 position{ GetPosition() };
 		FLOAT height{ m_terrain->GetHeight(position.x, position.z) };
-		SetPosition(XMFLOAT3{ position.x, height + 0.5f, position.z });
+		SetPosition(XMFLOAT3{ position.x, height, position.z });
 
 		// 해당 위치의 노말 저장
 		m_normal = m_terrain->GetNormal(position.x, position.z);

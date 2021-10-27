@@ -47,8 +47,10 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	shared_ptr<CubeMesh> cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
 	shared_ptr<CubeMesh> bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.5f, 0.1f) };
 	shared_ptr<TextureRectMesh> textureRectMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{}) };
+	shared_ptr<Mesh> tankMesh{ make_shared<Mesh>(device, commandList, "resource/tank2.obj") };
 
 	// 필요한 셰이더들 생성
+	shared_ptr<Shader> colorShader{ make_shared<Shader>(device, rootSignature) };
 	shared_ptr<TextureShader> textureShader{ make_shared<TextureShader>(device, rootSignature) };
 	shared_ptr<TerrainShader> terrainShader{ make_shared<TerrainShader>(device, rootSignature) };
 	shared_ptr<InstanceShader> instanceShader{ make_shared<InstanceShader>(device, rootSignature) };
@@ -80,7 +82,9 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	m_resourceManager->AddMesh("CUBE_MESH", cubeMesh);
 	m_resourceManager->AddMesh("BULLET_MESH", bulletMesh);
 	m_resourceManager->AddMesh("TEXTURE_RECT_MESH", textureRectMesh);
+	m_resourceManager->AddMesh("TANK_MESH", tankMesh);
 
+	m_resourceManager->AddShader("COLOR_SHADER", colorShader);
 	m_resourceManager->AddShader("TEXTURE_SHADER", textureShader);
 	m_resourceManager->AddShader("TERRAIN_SHADER", terrainShader);
 	m_resourceManager->AddShader("INSTANCE_SHADER", instanceShader);
@@ -116,8 +120,8 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 
 	// 플레이어 생성
 	shared_ptr<Player> player{ make_shared<Player>() };
-	player->SetMesh(m_resourceManager->GetMesh("CUBE_MESH"));
-	player->SetShader(m_resourceManager->GetShader("TEXTURE_SHADER"));
+	player->SetMesh(m_resourceManager->GetMesh("TANK_MESH"));
+	player->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
 	player->SetTexture(m_resourceManager->GetTexture("ROCK_TEXTURE"));
 	player->SetCamera(camera);
 
@@ -340,11 +344,17 @@ void Scene::ReleaseUploadBuffer()
 
 void Scene::CreateBullet()
 {
-	unique_ptr<Bullet> bullet{ make_unique<Bullet>(m_player->GetPosition(), m_player->GetLook(), m_player->GetNormal()) };
+	unique_ptr<Bullet> bullet{ make_unique<Bullet>(m_player->GetPosition(), m_player->GetLook(), m_player->GetNormal(), 100.0f) };
 	bullet->SetMesh(m_resourceManager->GetMesh("BULLET_MESH"));
 	bullet->SetShader(m_resourceManager->GetShader("TEXTURE_SHADER"));
 	bullet->SetTexture(m_resourceManager->GetTexture("ROCK_TEXTURE"));
-	bullet->SetPosition(m_player->GetPosition());
+
+	// 탱크 매쉬 피봇이 땅에 있기 때문에 조금 위에서 생성
+	// 그리고 탱크 포신 길이도 생각해서 조정해줘야함
+	XMFLOAT3 position{ m_player->GetPosition() };
+	position.y += 0.45f;
+	position = Vector3::Add(position, Vector3::Mul(m_player->GetLook(), 2.5f));
+	bullet->SetPosition(position);
 	m_gameObjects.push_back(move(bullet));
 }
 
