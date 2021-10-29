@@ -3,7 +3,7 @@
 
 GameObject::GameObject() : m_type{ GameObjectType::DEFAULT }, m_right { 1.0f, 0.0f, 0.0f }, m_up{ 0.0f, 1.0f, 0.0f }, m_front{ 0.0f, 0.0f, 1.0f },
 						   m_roll{ 0.0f }, m_pitch{ 0.0f }, m_yaw{ 0.0f }, m_terrain{ nullptr }, m_normal{ 0.0f, 1.0f, 0.0f }, m_look{ 0.0f, 0.0f, 1.0f },
-						   m_isDeleted{ FALSE }, m_textureInfo{ nullptr }, m_checkTerrain{ true }
+						   m_isDeleted{ false }, m_textureInfo{ nullptr }, m_checkTerrain{ true }, m_boundingBox{ XMFLOAT3{ 0.0f, 0.0f, 0.0f }, XMFLOAT3{ 0.0f, 0.0f, 0.0f }, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f } }
 {
 	XMStoreFloat4x4(&m_worldMatrix, XMMatrixIdentity());
 }
@@ -193,4 +193,23 @@ void Bullet::Update(FLOAT deltaTime)
 
 	// 총알 진행 방향으로 이동
 	Move(Vector3::Mul(m_direction, m_speed * deltaTime));
+}
+
+// --------------------------------------
+
+Building::Building() : GameObject{}
+{
+	m_type = GameObjectType::BUILDING;
+	m_boundingBox = BoundingOrientedBox(XMFLOAT3{ 0.0f, 1.6f, 0.0f }, XMFLOAT3{ 3.4f, 3.5f, 1.6f }, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
+}
+
+void Building::Update(FLOAT deltaTime)
+{
+	if (!m_terrain) return;
+
+	XMFLOAT3 pos{ GetPosition() };
+	FLOAT height{ m_terrain->GetHeight(pos.x, pos.z) };
+	SetPosition(XMFLOAT3{ pos.x, height, pos.z });
+	m_normal = m_terrain->GetNormal(pos.x, pos.z);
+	m_terrain = nullptr; // 건물은 움직이지 않으므로 한 번만 위치를 옮겨주면 됨
 }

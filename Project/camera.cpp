@@ -94,7 +94,7 @@ void Camera::SetPlayer(const shared_ptr<Player>& player)
 
 // --------------------------------------
 
-ThirdPersonCamera::ThirdPersonCamera() : Camera{}, m_offset{ 0.0f, 1.0f, -5.0f }, m_delay{ 0.01f }
+ThirdPersonCamera::ThirdPersonCamera() : Camera{}, m_offset{ 0.0f, 1.0f, -10.0f }, m_delay{ 0.01f }
 {
 
 }

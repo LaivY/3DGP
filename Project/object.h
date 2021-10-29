@@ -5,11 +5,11 @@
 #include "terrain.h"
 #include "texture.h"
 
-enum class GameObjectType {
-	DEFAULT, BILLBOARD, BULLET
-};
-
 class Camera;
+
+enum class GameObjectType {
+	DEFAULT, BILLBOARD, BULLET, BUILDING
+};
 
 class GameObject
 {
@@ -32,6 +32,7 @@ public:
 	void SetTexture(const shared_ptr<Texture>& texture);
 	void SetTextureInfo(unique_ptr<TextureInfo>& textureInfo);
 	void SetCheckTerrain(bool checkTerrain) { m_checkTerrain = checkTerrain; }
+	void SetDelete(bool isDeleted) { m_isDeleted = isDeleted; }
 
 	GameObjectType GetType() const { return m_type; }
 	XMFLOAT4X4 GetWorldMatrix() const { return m_worldMatrix; }
@@ -39,6 +40,7 @@ public:
 	XMFLOAT3 GetRight() const { return m_right; }
 	XMFLOAT3 GetUp() const { return m_up; }
 	XMFLOAT3 GetFront() const { return m_front; }
+	BoundingOrientedBox GetBoundingBox() const { return m_boundingBox; }
 	HeightMapTerrain* GetTerrain() const { return m_terrain; }
 	XMFLOAT3 GetNormal() const { return m_normal; }
 	XMFLOAT3 GetLook() const { return m_look; }
@@ -48,8 +50,7 @@ public:
 protected:
 	GameObjectType			m_type;			// 필요할 때 캐스팅하기 위한 객체 타입
 
-	XMFLOAT4X4				m_worldMatrix;	// 월드 변환
-
+	XMFLOAT4X4				m_worldMatrix;	// 월드 행렬
 	XMFLOAT3				m_right;		// 로컬 x축
 	XMFLOAT3				m_up;			// 로컬 y축
 	XMFLOAT3				m_front;		// 로컬 z축
@@ -58,12 +59,14 @@ protected:
 	FLOAT					m_pitch;		// x축 회전각
 	FLOAT					m_yaw;			// y축 회전각
 
+	BoundingOrientedBox		m_boundingBox;	// 피격 박스
+
+	bool					m_checkTerrain; // true일 경우 어느 지형 위에 있는지 확인함
 	HeightMapTerrain*		m_terrain;		// 서있는 지형의 포인터
 	XMFLOAT3				m_normal;		// 서있는 지형의 노멀 벡터
 	XMFLOAT3				m_look;			// 지형이 적용된 정면
-	bool					m_checkTerrain; // true일 경우 어느 지형 위에 있는지 확인함
 
-	bool					m_isDeleted;	// true일 경우 삭제될 객체임
+	bool					m_isDeleted;	// true일 경우 다음 프레임에 삭제됨
 
 	shared_ptr<Mesh>		m_mesh;			// 메쉬
 	shared_ptr<Shader>		m_shader;		// 셰이더
@@ -97,4 +100,13 @@ private:
 	XMFLOAT3	m_direction;	 // 날아가는 방향
 	FLOAT		m_speed;		 // 날아가는 속도
 	FLOAT		m_damage;		 // 피해량
+};
+
+class Building : public GameObject
+{
+public:
+	Building();
+	~Building() = default;
+
+	virtual void Update(FLOAT deltaTime);
 };

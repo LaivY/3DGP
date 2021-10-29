@@ -46,8 +46,10 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	// 필요한 메쉬들 생성
 	shared_ptr<CubeMesh> cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
 	shared_ptr<CubeMesh> bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.5f, 0.1f) };
-	shared_ptr<TextureRectMesh> textureRectMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{}) };
-	shared_ptr<Mesh> tankMesh{ make_shared<Mesh>(device, commandList, "resource/tank2.obj") };
+	shared_ptr<TextureRectMesh> treeMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{}) };
+	shared_ptr<TextureRectMesh> explosionMesh{ make_shared<TextureRectMesh>(device, commandList, 5.0f, 0.0f, 5.0f, XMFLOAT3{}) };
+	shared_ptr<Mesh> tankMesh{ make_shared<Mesh>(device, commandList, "resource/tank.obj") };
+	shared_ptr<Mesh> buildingMesh{ make_shared<Mesh>(device, commandList, "resource/building.obj") };
 
 	// 필요한 셰이더들 생성
 	shared_ptr<Shader> colorShader{ make_shared<Shader>(device, rootSignature) };
@@ -81,8 +83,10 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	// 리소스 보관 객체에 저장
 	m_resourceManager->AddMesh("CUBE_MESH", cubeMesh);
 	m_resourceManager->AddMesh("BULLET_MESH", bulletMesh);
-	m_resourceManager->AddMesh("TEXTURE_RECT_MESH", textureRectMesh);
+	m_resourceManager->AddMesh("TREE_MESH", treeMesh);
+	m_resourceManager->AddMesh("EXPLOSION_MESH", explosionMesh);
 	m_resourceManager->AddMesh("TANK_MESH", tankMesh);
+	m_resourceManager->AddMesh("BUILDING_MESH", buildingMesh);
 
 	m_resourceManager->AddShader("COLOR_SHADER", colorShader);
 	m_resourceManager->AddShader("TEXTURE_SHADER", textureShader);
@@ -122,25 +126,32 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	shared_ptr<Player> player{ make_shared<Player>() };
 	player->SetMesh(m_resourceManager->GetMesh("TANK_MESH"));
 	player->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
-	player->SetTexture(m_resourceManager->GetTexture("ROCK_TEXTURE"));
 	player->SetCamera(camera);
 
 	// 씬, 카메라 플레이어 설정
 	SetPlayer(player);
 	camera->SetPlayer(m_player);
 
+	// 집 생성
+	unique_ptr<Building> object{ make_unique<Building>() };
+	object->SetMesh(m_resourceManager->GetMesh("BUILDING_MESH"));
+	object->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
+	object->SetPosition(XMFLOAT3{ 30.0f, -270.0f, 30.0f });
+	m_gameObjects.push_back(move(object));
+
 	// 빌보드 객체 10000개를 인스턴싱으로 생성
-	unique_ptr<Instance> instance{ make_unique<Instance>(device, commandList, 100) };
-	for (int i = 0; i < 10000; ++i)
+	int row{ 25 }, column{ 25 }, distance{ 10 };
+	unique_ptr<Instance> instance{ make_unique<Instance>(device, commandList, row * column) };
+	for (int i = 0; i < row * column; ++i)
 	{
-		float x{ static_cast<float>((i * 10) % 100) };
-		float z{ (i / 10) * 10.0f };
+		float x; x = i % row * distance;
+		float z; z = i / row * distance;
 
 		unique_ptr<BillboardObject> obj{ make_unique<BillboardObject>(camera) };
-		obj->SetPosition(XMFLOAT3{ x, -270.0f, z });
+		obj->SetPosition(XMFLOAT3{ x, 0.0f, z });
 		instance->AddGameObject(move(obj));
 	}
-	instance->SetMesh(m_resourceManager->GetMesh("TEXTURE_RECT_MESH"));
+	instance->SetMesh(m_resourceManager->GetMesh("TREE_MESH"));
 	instance->SetShader(m_resourceManager->GetShader("INSTANCE_SHADER"));
 	instance->SetTexture(m_resourceManager->GetTexture("TREE_TEXTURE"));
 	m_instances.push_back(move(instance));
@@ -217,8 +228,31 @@ void Scene::OnUpdate(FLOAT deltaTime)
 
 void Scene::Update(FLOAT deltaTime)
 {
+	BulletCollisionCheck();
 	RemoveDeletedGameObjects();
 	UpdateGameObjectsTerrain();
+}
+
+void Scene::BulletCollisionCheck()
+{
+	// 범위 기반 for문을 2개로 하니까 안됨... 인덱스로 순회해야함
+	for (int i = 0; i < m_gameObjects.size(); ++i)
+	{
+		if (m_gameObjects[i]->GetType() != GameObjectType::BUILDING) continue;
+		BoundingOrientedBox boundingBox{ m_gameObjects[i]->GetBoundingBox() };
+		boundingBox.Transform(boundingBox, XMLoadFloat4x4(&m_gameObjects[i]->GetWorldMatrix()));
+
+		for (int j = 0; j < m_gameObjects.size(); ++j)
+		{
+			if (m_gameObjects[j]->GetType() != GameObjectType::BULLET) continue;
+			if (boundingBox.Contains(XMLoadFloat3(&m_gameObjects[j]->GetPosition())))
+			{
+				m_gameObjects[i]->SetDelete(true);
+				m_gameObjects[j]->SetDelete(true);
+				break;
+			}
+		}
+	}
 }
 
 void Scene::RemoveDeletedGameObjects()
@@ -232,16 +266,19 @@ void Scene::RemoveDeletedGameObjects()
 		if (object->GetIsDeleted() && object->GetType() == GameObjectType::BULLET)
 		{
 			unique_ptr<BillboardObject> explosion{ make_unique<BillboardObject>(m_camera) };
-			explosion->SetMesh(m_resourceManager->GetMesh("TEXTURE_RECT_MESH"));
+			explosion->SetMesh(m_resourceManager->GetMesh("EXPLOSION_MESH"));
 			explosion->SetShader(m_resourceManager->GetShader("TEXTURE_SHADER"));
 			explosion->SetTexture(m_resourceManager->GetTexture("EXPLOSION_TEXTURE"));
+
+			// 텍스쳐 정보
 			unique_ptr<TextureInfo> textureInfo{ make_unique<TextureInfo>() };
-			textureInfo->frameInterver *= 1.5f;
-			textureInfo->isFrameRepeat = false;
+			textureInfo->frameInterver *= 1.5f;				// 1 프레임당 보여줄 시간
+			textureInfo->isFrameRepeat = false;				// 끝 프레임까지 가면 객체를 삭제함
 			explosion->SetTextureInfo(textureInfo);
-			explosion->SetPosition(object->GetPosition());
-			explosion->SetCheckTerrain(false);
-			willBeAdded.push_back(move(explosion));
+
+			explosion->SetCheckTerrain(false);				// 폭발은 지형 위에 있을 필요 없음
+			explosion->SetPosition(object->GetPosition());	// 지형과 닿은 위치에 폭발함
+			willBeAdded.push_back(move(explosion));			// 지금 당장 추가하면 이터레이터가 꼬이기 때문에 나중에 추가해줄 벡터에 추가
 		}
 
 		return object->GetIsDeleted();
@@ -298,7 +335,6 @@ void Scene::UpdateGameObjectsTerrain()
 	for (auto& object : m_gameObjects)
 	{
 		if (!object->GetCheckTerrain()) continue;
-
 		pos = object->GetPosition();
 		auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
 		object->SetTerrain(terrain != m_terrains.end() ? terrain->get() : nullptr);
@@ -306,6 +342,9 @@ void Scene::UpdateGameObjectsTerrain()
 	for (auto& instance : m_instances)
 		for (auto& object : instance->GetGameObjects())
 		{
+			// 나무와 풀은 한 번 지형이 정해졌으면 움직이지않으므로 검사할 필요 없음
+			if ((object->GetType() == GameObjectType::BILLBOARD) && object->GetTerrain()) continue;
+
 			pos = object->GetPosition();
 			auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
 			object->SetTerrain(terrain != m_terrains.end() ? terrain->get() : nullptr);

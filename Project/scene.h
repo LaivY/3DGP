@@ -42,6 +42,7 @@ public:
 	void OnUpdate(FLOAT deltaTime);
 
 	void Update(FLOAT deltaTime);
+	void BulletCollisionCheck();
 	void RemoveDeletedGameObjects();
 	void UpdateGameObjectsTerrain();
 
@@ -49,7 +50,6 @@ public:
 	void ReleaseUploadBuffer();
 
 	void CreateBullet();
-	void CreateExplosion() { }
 
 	void SetSkybox(unique_ptr<Skybox>& skybox);
 	void SetPlayer(const shared_ptr<Player>& player);
