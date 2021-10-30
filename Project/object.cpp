@@ -122,7 +122,7 @@ XMFLOAT3 GameObject::GetPosition() const
 
 // --------------------------------------
 
-BillboardObject::BillboardObject(const shared_ptr<Camera>& camera) : GameObject{}, m_camera{ camera }
+BillboardObject::BillboardObject(const shared_ptr<Camera>& camera, const XMFLOAT3& offset) : GameObject{}, m_camera{ camera }, m_offset{ offset }
 {
 	m_type = GameObjectType::BILLBOARD;
 }
@@ -147,7 +147,7 @@ void BillboardObject::Update(FLOAT deltaTime)
 	{
 		XMFLOAT3 pos{ GetPosition() };
 		FLOAT height{ m_terrain->GetHeight(pos.x, pos.z) };
-		SetPosition(XMFLOAT3{ pos.x, height + 5.0f, pos.z });
+		SetPosition(XMFLOAT3{ pos.x, height, pos.z });
 		m_normal = m_terrain->GetNormal(pos.x, pos.z);
 	}
 }

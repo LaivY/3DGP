@@ -77,7 +77,7 @@ HeightMapGridMesh::HeightMapGridMesh(const ComPtr<ID3D12Device>& device, const C
 			vertices.emplace_back(
 				XMFLOAT3{ x * scale.x, heightMapImage->GetHeight(x, z) * scale.y, z * scale.z },
 				XMFLOAT2{ (float)x / (float)heightMapImage->GetWidth(), 1.0f - ((float)z / (float)heightMapImage->GetLength()) },
-				XMFLOAT2{ (float)x / (float)scale.x * 1.5f, (float)z / (float)scale.z * 1.5f });
+				XMFLOAT2{ (float)x / (float)scale.x * 0.5f, (float)z / (float)scale.z * 0.5f });
 	CreateVertexBuffer(device, commandList, vertices.data(), sizeof(Texture2Vertex), vertices.size());
 
 	// 인덱스 데이터 설정, 인덱스 버퍼 생성

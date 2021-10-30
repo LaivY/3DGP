@@ -37,7 +37,7 @@ shared_ptr<Texture> ResourceManager::GetTexture(const string& key) const
 void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const ComPtr<ID3D12RootSignature>& rootSignature, FLOAT aspectRatio)
 {
 	// 메쉬, 셰이더, 텍스쳐들은 모두 ResourceManager에 있는 map에 담는다.
-	// ResourceManager::Add??? 함수를 통해 리소스를 추가하고 ResourceManager::Get??? 함수를 통해 리소스를 불러올 수 있다.
+	// ResourceManager::Add 함수를 통해 리소스를 추가하고 ResourceManager::Get 함수를 통해 리소스를 불러올 수 있다.
 	// class ResourceManager가 있으므로서 나중에 객체를 생성할 때 필요한 Mesh, Shader, Texture를 미리 생성해둘 수 있다.
 
 	// 리소스들 담고있을 ResourceManager 생성
@@ -47,6 +47,7 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	shared_ptr<CubeMesh> cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
 	shared_ptr<CubeMesh> bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.5f, 0.1f) };
 	shared_ptr<TextureRectMesh> treeMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{}) };
+	shared_ptr<TextureRectMesh> grassMesh{ make_shared<TextureRectMesh>(device, commandList, 3.0f, 0.0f, 1.5f, XMFLOAT3{}) };
 	shared_ptr<TextureRectMesh> explosionMesh{ make_shared<TextureRectMesh>(device, commandList, 5.0f, 0.0f, 5.0f, XMFLOAT3{}) };
 	shared_ptr<Mesh> tankMesh{ make_shared<Mesh>(device, commandList, "resource/tank.obj") };
 	shared_ptr<Mesh> buildingMesh{ make_shared<Mesh>(device, commandList, "resource/building.obj") };
@@ -68,9 +69,16 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	treeTexture->CreateSrvDescriptorHeap(device);
 	treeTexture->CreateShaderResourceView(device);
 
+	shared_ptr<Texture> grassTexture{ make_shared<Texture>() };
+	grassTexture->LoadTextureFile(device, commandList, TEXT("resource/grass.dds"), 2);
+	grassTexture->CreateSrvDescriptorHeap(device);
+	grassTexture->CreateShaderResourceView(device);
+
 	shared_ptr<Texture> terrainTexture{ make_shared<Texture>() };
-	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/BaseTerrain.dds"), 2); // BaseTexture
-	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/DetailTerrain.dds"), 3); // DetailTexture
+	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/BaseTerrain.dds"), 2);		// BaseTexture
+	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/DetailTerrain.dds"), 3);	// DetailTexture
+	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/road.dds"), 4);				// roadTexture
+	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/roadDetail.dds"), 5);		// roadDetailTexture
 	terrainTexture->CreateSrvDescriptorHeap(device);
 	terrainTexture->CreateShaderResourceView(device);
 
@@ -84,6 +92,7 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	m_resourceManager->AddMesh("CUBE_MESH", cubeMesh);
 	m_resourceManager->AddMesh("BULLET_MESH", bulletMesh);
 	m_resourceManager->AddMesh("TREE_MESH", treeMesh);
+	m_resourceManager->AddMesh("GRASS_MESH", grassMesh);
 	m_resourceManager->AddMesh("EXPLOSION_MESH", explosionMesh);
 	m_resourceManager->AddMesh("TANK_MESH", tankMesh);
 	m_resourceManager->AddMesh("BUILDING_MESH", buildingMesh);
@@ -95,12 +104,14 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 
 	m_resourceManager->AddTexture("ROCK_TEXTURE", rockTexture);
 	m_resourceManager->AddTexture("TREE_TEXTURE", treeTexture);
+	m_resourceManager->AddTexture("GRASS_TEXTURE", grassTexture);
 	m_resourceManager->AddTexture("TERRAIN_TEXTURE", terrainTexture);
 	m_resourceManager->AddTexture("EXPLOSION_TEXTURE", explosionTexture);
 
 	// 지형 생성
 	unique_ptr<HeightMapTerrain> terrain{
-		make_unique<HeightMapTerrain>(device, commandList, TEXT("resource/heightMap.raw"), terrainShader, terrainTexture, 257, 257, 257, 257, XMFLOAT3{ 1.0f, 0.2f, 1.0f })
+		make_unique<HeightMapTerrain>(device, commandList, TEXT("resource/heightMap.raw"),
+		m_resourceManager->GetShader("TERRAIN_SHADER"), m_resourceManager->GetTexture("TERRAIN_TEXTURE"), 257, 257, 257, 257, XMFLOAT3{ 1.0f, 0.2f, 1.0f })
 	};
 	terrain->SetPosition(XMFLOAT3{ 0.0f, -300.0f, 0.0f });
 	m_terrains.push_back(move(terrain));
@@ -139,21 +150,40 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	object->SetPosition(XMFLOAT3{ 30.0f, -270.0f, 30.0f });
 	m_gameObjects.push_back(move(object));
 
-	// 빌보드 객체 10000개를 인스턴싱으로 생성
+	// 나무 생성
 	int row{ 25 }, column{ 25 }, distance{ 10 };
 	unique_ptr<Instance> instance{ make_unique<Instance>(device, commandList, row * column) };
 	for (int i = 0; i < row * column; ++i)
 	{
-		float x; x = i % row * distance;
-		float z; z = i / row * distance;
+		float x{ static_cast<float>(i % row * distance) };
+		float z{ static_cast<float>(i / row * distance) };
 
-		unique_ptr<BillboardObject> obj{ make_unique<BillboardObject>(camera) };
+		unique_ptr<BillboardObject> obj{ make_unique<BillboardObject>(camera, XMFLOAT3{ 0.0f, 5.0f, 0.0f }) };
 		obj->SetPosition(XMFLOAT3{ x, 0.0f, z });
 		instance->AddGameObject(move(obj));
 	}
 	instance->SetMesh(m_resourceManager->GetMesh("TREE_MESH"));
 	instance->SetShader(m_resourceManager->GetShader("INSTANCE_SHADER"));
 	instance->SetTexture(m_resourceManager->GetTexture("TREE_TEXTURE"));
+	m_instances.push_back(move(instance));
+
+	// 풀 생성
+	row = 50; column = 50; distance = 5;
+	instance = make_unique<Instance>(device, commandList, row * column);
+	for (int i = 0; i < row * column; ++i)
+	{
+		float x{ static_cast<float>(i % row * distance) };
+		float z{ static_cast<float>(i / row * distance) };
+
+		if (fmod(x, 10) == 0.0f) continue; // 나무 있는 곳은 생성 안함
+
+		unique_ptr<BillboardObject> obj{ make_unique<BillboardObject>(camera, XMFLOAT3{ 0.0f, 1.5f / 2.0f, 0.0f }) };
+		obj->SetPosition(XMFLOAT3{ x, 0.0f, z });
+		instance->AddGameObject(move(obj));
+	}
+	instance->SetMesh(m_resourceManager->GetMesh("GRASS_MESH"));
+	instance->SetShader(m_resourceManager->GetShader("INSTANCE_SHADER"));
+	instance->SetTexture(m_resourceManager->GetTexture("GRASS_TEXTURE"));
 	m_instances.push_back(move(instance));
 }
 

@@ -77,14 +77,16 @@ protected:
 class BillboardObject : public GameObject
 {
 public:
-	BillboardObject(const shared_ptr<Camera>& camera);
+	BillboardObject(const shared_ptr<Camera>& camera, const XMFLOAT3& offset = { 0.0f, 0.0f, 0.0f });
 	~BillboardObject() = default;
 
 	virtual void Update(FLOAT deltaTime);
 	void SetCamera(const shared_ptr<Camera>& camera);
+	XMFLOAT3 GetOffset() const { return m_offset; }
 
 private:
-	shared_ptr<Camera> m_camera; // 기준이 되는 카메라
+	shared_ptr<Camera>	m_camera; // 기준이 되는 카메라
+	XMFLOAT3			m_offset; // 피봇 위치에서 오프셋을 더한 위치에 렌더링함
 };
 
 class Bullet : public GameObject
