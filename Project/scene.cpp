@@ -77,8 +77,11 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	shared_ptr<Texture> terrainTexture{ make_shared<Texture>() };
 	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/BaseTerrain.dds"), 2);		// BaseTexture
 	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/DetailTerrain.dds"), 3);	// DetailTexture
-	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/road.dds"), 4);				// roadTexture
-	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/roadDetail.dds"), 5);		// roadDetailTexture
+
+	// roadTexture[2] : 이렇게 배열로되어 있는 루트파라미터의 경우에는 이후에 로드하는 텍스쳐는 이전의 루트파라미터에 묶인다.
+	// 아래와 같은 경우 도로의 디테일 텍스쳐를 로드할 때 4번째 파라미터의 숫자는 아무 상관 없다.
+	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/road.dds"), 4);				// roadTexture[0]
+	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/roadDetail.dds"), 4);		// roadTexture[1]
 	terrainTexture->CreateSrvDescriptorHeap(device);
 	terrainTexture->CreateShaderResourceView(device);
 
@@ -113,7 +116,7 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 		make_unique<HeightMapTerrain>(device, commandList, TEXT("resource/heightMap.raw"),
 		m_resourceManager->GetShader("TERRAIN_SHADER"), m_resourceManager->GetTexture("TERRAIN_TEXTURE"), 257, 257, 257, 257, XMFLOAT3{ 1.0f, 0.2f, 1.0f })
 	};
-	terrain->SetPosition(XMFLOAT3{ 0.0f, -300.0f, 0.0f });
+	terrain->SetPosition(XMFLOAT3{ -127.5f, -100.0f, -127.5f });
 	m_terrains.push_back(move(terrain));
 
 	// 카메라 생성
@@ -144,11 +147,17 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	camera->SetPlayer(m_player);
 
 	// 집 생성
-	unique_ptr<Building> object{ make_unique<Building>() };
-	object->SetMesh(m_resourceManager->GetMesh("BUILDING_MESH"));
-	object->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
-	object->SetPosition(XMFLOAT3{ 30.0f, -270.0f, 30.0f });
-	m_gameObjects.push_back(move(object));
+	//for (int i = 0; i < 100; ++i)
+	//{
+	//	float x{ static_cast<float>(rand() % 257) };
+	//	float z{ static_cast<float>(rand() % 257) };
+
+	//	unique_ptr<Building> object{ make_unique<Building>() };
+	//	object->SetMesh(m_resourceManager->GetMesh("BUILDING_MESH"));
+	//	object->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
+	//	object->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
+	//	m_gameObjects.push_back(move(object));
+	//}
 
 	// 나무 생성
 	int row{ 25 }, column{ 25 }, distance{ 10 };
@@ -159,7 +168,7 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 		float z{ static_cast<float>(i / row * distance) };
 
 		unique_ptr<BillboardObject> obj{ make_unique<BillboardObject>(camera, XMFLOAT3{ 0.0f, 5.0f, 0.0f }) };
-		obj->SetPosition(XMFLOAT3{ x, 0.0f, z });
+		obj->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
 		instance->AddGameObject(move(obj));
 	}
 	instance->SetMesh(m_resourceManager->GetMesh("TREE_MESH"));
@@ -178,12 +187,26 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 		if (fmod(x, 10) == 0.0f) continue; // 나무 있는 곳은 생성 안함
 
 		unique_ptr<BillboardObject> obj{ make_unique<BillboardObject>(camera, XMFLOAT3{ 0.0f, 1.5f / 2.0f, 0.0f }) };
-		obj->SetPosition(XMFLOAT3{ x, 0.0f, z });
+		obj->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
 		instance->AddGameObject(move(obj));
 	}
 	instance->SetMesh(m_resourceManager->GetMesh("GRASS_MESH"));
 	instance->SetShader(m_resourceManager->GetShader("INSTANCE_SHADER"));
 	instance->SetTexture(m_resourceManager->GetTexture("GRASS_TEXTURE"));
+	m_instances.push_back(move(instance));
+
+	// 건물 생성
+	instance = make_unique<Instance>(device, commandList, 100);
+	for (int i = 0; i < 100; ++i)
+	{
+		float x{ static_cast<float>(rand() % 257) };
+		float z{ static_cast<float>(rand() % 257) };
+		unique_ptr<Building> building{ make_unique<Building>() };
+		building->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
+		instance->AddGameObject(move(building));
+	}
+	instance->SetMesh(m_resourceManager->GetMesh("BUILDING_MESH"));
+	instance->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
 	m_instances.push_back(move(instance));
 }
 
@@ -234,14 +257,14 @@ void Scene::OnKeyboardEvent(FLOAT deltaTime) const
 	{
 		m_player->AddVelocity(Vector3::Mul(m_player->GetRight(), deltaTime * 10.0f));
 	}
-	if (GetAsyncKeyState(VK_SPACE) & 0x8000)
-	{
-		m_player->AddVelocity(Vector3::Mul(m_player->GetUp(), deltaTime * 10.0f));
-	}
-	if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-	{
-		m_player->AddVelocity(Vector3::Mul(m_player->GetUp(), deltaTime * -10.0f));
-	}
+	//if ((GetAsyncKeyState(VK_SPACE) & 0x8000) && m_player->GetVelocity().y == 0.0f)
+	//{
+	//	m_player->AddVelocity(Vector3::Mul(m_player->GetUp(), deltaTime * 10.0f));
+	//}
+	//if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+	//{
+	//	m_player->AddVelocity(Vector3::Mul(m_player->GetUp(), deltaTime * -10.0f));
+	//}
 }
 
 void Scene::OnUpdate(FLOAT deltaTime)
@@ -268,13 +291,18 @@ void Scene::BulletCollisionCheck()
 	// 범위 기반 for문을 2개로 하니까 안됨... 인덱스로 순회해야함
 	for (int i = 0; i < m_gameObjects.size(); ++i)
 	{
+		// 이미 삭제된 오브젝트와 건물이 아닌 객체는 패스
+		if (m_gameObjects[i]->GetIsDeleted()) continue;
 		if (m_gameObjects[i]->GetType() != GameObjectType::BUILDING) continue;
+
 		BoundingOrientedBox boundingBox{ m_gameObjects[i]->GetBoundingBox() };
 		boundingBox.Transform(boundingBox, XMLoadFloat4x4(&m_gameObjects[i]->GetWorldMatrix()));
-
 		for (int j = 0; j < m_gameObjects.size(); ++j)
 		{
+			// 이미 삭제된 오브젝트와 총알이 아닌 객체는 패스
+			if (m_gameObjects[j]->GetIsDeleted()) continue;
 			if (m_gameObjects[j]->GetType() != GameObjectType::BULLET) continue;
+
 			if (boundingBox.Contains(XMLoadFloat3(&m_gameObjects[j]->GetPosition())))
 			{
 				m_gameObjects[i]->SetDelete(true);
@@ -305,7 +333,6 @@ void Scene::RemoveDeletedGameObjects()
 			textureInfo->frameInterver *= 1.5f;				// 1 프레임당 보여줄 시간
 			textureInfo->isFrameRepeat = false;				// 끝 프레임까지 가면 객체를 삭제함
 			explosion->SetTextureInfo(textureInfo);
-
 			explosion->SetCheckTerrain(false);				// 폭발은 지형 위에 있을 필요 없음
 			explosion->SetPosition(object->GetPosition());	// 지형과 닿은 위치에 폭발함
 			willBeAdded.push_back(move(explosion));			// 지금 당장 추가하면 이터레이터가 꼬이기 때문에 나중에 추가해줄 벡터에 추가

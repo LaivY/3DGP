@@ -48,7 +48,7 @@ void Texture::CreateSrvDescriptorHeap(const ComPtr<ID3D12Device>& device)
 
 void Texture::CreateShaderResourceView(const ComPtr<ID3D12Device>& device)
 {
-	D3D12_CPU_DESCRIPTOR_HANDLE srvDescriptorHeapStart{ m_srvHeap->GetCPUDescriptorHandleForHeapStart() };
+	CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescriptorHandle{ m_srvHeap->GetCPUDescriptorHandleForHeapStart() };
 	for (const auto& [texture, _] : m_textures)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -56,8 +56,8 @@ void Texture::CreateShaderResourceView(const ComPtr<ID3D12Device>& device)
 		srvDesc.Format = texture->GetDesc().Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = -1;
-		device->CreateShaderResourceView(texture.Get(), &srvDesc, srvDescriptorHeapStart);
-		srvDescriptorHeapStart.ptr += g_cbvSrvDescriptorIncrementSize;
+		device->CreateShaderResourceView(texture.Get(), &srvDesc, srvDescriptorHandle);
+		srvDescriptorHandle.Offset(g_cbvSrvDescriptorIncrementSize);
 	}
 }
 
@@ -65,19 +65,28 @@ void Texture::UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& comm
 {
 	ID3D12DescriptorHeap* ppHeaps[] = { m_srvHeap.Get() };
 	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-	D3D12_GPU_DESCRIPTOR_HANDLE srvDescriptorHandle{ m_srvHeap->GetGPUDescriptorHandleForHeapStart() };
+	CD3DX12_GPU_DESCRIPTOR_HANDLE srvDescriptorHandle{ m_srvHeap->GetGPUDescriptorHandleForHeapStart() };
 
 	if (m_textureInfo)
 	{
-		srvDescriptorHandle.ptr += g_cbvSrvDescriptorIncrementSize * m_textureInfo->frame;
+		srvDescriptorHandle.Offset(m_textureInfo->frame, g_cbvSrvDescriptorIncrementSize);
 		commandList->SetGraphicsRootDescriptorTable(m_textures[m_textureInfo->frame].second, srvDescriptorHandle);
 	}
 	else
 	{
-		for (const auto& [_, rootParameterIndex] : m_textures)
+		for (int i = 0; i < m_textures.size(); ++i)
 		{
+			auto [_, rootParameterIndex] = m_textures[i];
 			commandList->SetGraphicsRootDescriptorTable(rootParameterIndex, srvDescriptorHandle);
-			srvDescriptorHandle.ptr += g_cbvSrvDescriptorIncrementSize;
+			srvDescriptorHandle.Offset(g_cbvSrvDescriptorIncrementSize);
+
+			// Texture2D roadTexture[2]
+			// 2개짜리 배열이기 때문에 다음 1개는 건너뛴다.
+			if (rootParameterIndex == 4)
+			{
+				srvDescriptorHandle.Offset(g_cbvSrvDescriptorIncrementSize);
+				++i;
+			}
 		}
 	}
 }

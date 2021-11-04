@@ -47,7 +47,7 @@ void Instance::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) cons
 			}
 			else m_instanceBufferPointer[i].worldMatrix = Matrix::Transpose(m_gameObjects[i]->GetWorldMatrix());
 		}
-		m_mesh->Render(commandList, m_instanceBufferView, m_gameObjects.size());
+		m_mesh->Render(commandList, m_instanceBufferView, m_count);
 	}
 }
 
@@ -73,10 +73,4 @@ void Instance::SetTexture(const shared_ptr<Texture>& texture)
 {
 	if (m_texture) m_texture.reset();
 	m_texture = texture;
-}
-
-void Instance::ReleaseUploadBuffer() const
-{
-	if (m_mesh) m_mesh->ReleaseUploadBuffer();
-	if (m_texture) m_texture->ReleaseUploadBuffer();
 }

@@ -8,37 +8,58 @@ Player::Player() : GameObject{}, m_velocity{ 0.0f, 0.0f, 0.0f }, m_maxVelocity{ 
 
 void Player::Update(FLOAT deltaTime)
 {
+	// 텍스쳐 애니메이션
 	GameObject::Update(deltaTime);
+
+	// 중력
+	m_velocity.y -= 9.8f * deltaTime;
 
 	// 이동
 	Move(m_velocity);
 
+	// 플레이어 위치 제한 (-127.5 ~ +127.5 ^ 2)
+	XMFLOAT3 position{ GetPosition() };
+	position.x = max(position.x, -127.5f);
+	position.x = min(position.x, +127.5f);
+	position.z = max(position.z, -127.5f);
+	position.z = min(position.z, +127.5f);
+	SetPosition(position);
+
 	// 플레이어가 어떤 지형 위에 있다면
 	if (m_terrain)
 	{
-		// 플레이어가 지형 위를 이동하도록
-		XMFLOAT3 position{ GetPosition() };
+		position = GetPosition();
 		FLOAT height{ m_terrain->GetHeight(position.x, position.z) };
-		SetPosition(XMFLOAT3{ position.x, height, position.z });
 
-		// 해당 위치의 노말 저장
-		m_normal = m_terrain->GetNormal(position.x, position.z);
-
-		// 지형이 적용된 정면 벡터를 계산
-		float theta{ acosf(Vector3::Dot(m_up, m_normal)) };
-		if (theta) // +y축과 m_normal이 다를 때
+		// 플레이어가 지형의 높이보다 밑에있다면 또는 지형에 붙어서 이동중이라면
+		if (position.y < height)
 		{
-			XMFLOAT3 right{ Vector3::Normalize(Vector3::Cross(m_up, m_normal)) };
-			if (m_normal.z < 0)
+			// 플레이어가 지형 위를 이동하도록
+			SetPosition(XMFLOAT3{ position.x, height, position.z });
+
+			// 해당 위치의 노말 저장
+			m_normal = m_terrain->GetNormal(position.x, position.z);
+
+			// 지형이 적용된 정면 벡터를 계산
+			float theta{ acosf(Vector3::Dot(m_up, m_normal)) };
+			if (theta) // +y축과 m_normal이 다를 때
 			{
-				right = Vector3::Mul(right, -1);
-				theta *= -1;
+				XMFLOAT3 right{ Vector3::Normalize(Vector3::Cross(m_up, m_normal)) };
+				if (m_normal.z < 0)
+				{
+					right = Vector3::Mul(right, -1);
+					theta *= -1;
+				}
+				XMFLOAT4X4 rotate; XMStoreFloat4x4(&rotate, XMMatrixRotationNormal(XMLoadFloat3(&right), theta));
+				m_look = Vector3::TransformNormal(XMFLOAT3{ m_worldMatrix._31, m_worldMatrix._32, m_worldMatrix._33 }, rotate);
 			}
-			XMFLOAT4X4 rotate; XMStoreFloat4x4(&rotate, XMMatrixRotationNormal(XMLoadFloat3(&right), theta));
-			m_look = Vector3::TransformNormal(XMFLOAT3{ m_worldMatrix._31, m_worldMatrix._32, m_worldMatrix._33 }, rotate);
+			else m_look = m_front;
+
+			// 중력 없앰
+			m_velocity.y = 0.0f;
 		}
-		else m_look = m_front;
 	}
+	else m_look = m_front;
 
 	// 마찰력 적용
 	m_velocity = Vector3::Mul(m_velocity, 1 / m_friction * deltaTime);
@@ -80,10 +101,10 @@ void Player::AddVelocity(const XMFLOAT3& increase)
 	m_velocity = Vector3::Add(m_velocity, increase);
 
 	// 최대 속도에 걸린다면 해당 비율로 축소시킴
-	FLOAT length{ Vector3::Length(m_velocity) };
-	if (length > m_maxVelocity)
-	{
-		FLOAT ratio{ m_maxVelocity / length };
-		m_velocity = Vector3::Mul(m_velocity, ratio);
-	}
+	//FLOAT length{ Vector3::Length(m_velocity) };
+	//if (length > m_maxVelocity)
+	//{
+	//	FLOAT ratio{ m_maxVelocity / length };
+	//	m_velocity = Vector3::Mul(m_velocity, ratio);
+	//}
 }

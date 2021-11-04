@@ -66,8 +66,7 @@ struct VSInstanceOutput
 
 Texture2D g_texture : register(t0);
 Texture2D g_detailTexture : register(t1);
-Texture2D g_roadTexture : register(t2);
-Texture2D g_roadDetailTexture : register(t3);
+Texture2D g_roadTexture[2] : register(t2);
 SamplerState g_sampler : register(s0);
 
 // --------------------------------------
@@ -124,13 +123,14 @@ float4 PSTerrainMain(VSTerrainOutput input) : SV_TARGET
 {    
     float4 baseTextureColor = g_texture.Sample(g_sampler, input.uv0);
     float4 detailTextureColor = g_detailTexture.Sample(g_sampler, input.uv1);
-    float4 roadTextureColor = g_roadTexture.Sample(g_sampler, input.uv0);
-    float4 roadDetailTextureColor = g_roadDetailTexture.Sample(g_sampler, input.uv1);
-    
+    float4 roadTextureColor = g_roadTexture[0].Sample(g_sampler, input.uv0);
+
     if (roadTextureColor.a == 1.0f)
     {
+        float4 roadDetailTextureColor = g_roadTexture[1].Sample(g_sampler, input.uv1);
         return saturate(roadTextureColor * 0.6f + roadDetailTextureColor * 0.4f);
     }
+    
     return saturate(baseTextureColor * 0.6f + detailTextureColor * 0.4f);
 }
 

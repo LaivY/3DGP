@@ -10,18 +10,20 @@ GameObject::GameObject() : m_type{ GameObjectType::DEFAULT }, m_right { 1.0f, 0.
 
 void GameObject::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
 {
-	// PSO 설정
+	// 셰이더 PSO 설정
 	if (m_shader) commandList->SetPipelineState(m_shader->GetPipelineState().Get());
 
 	// 셰이더 변수 최신화
 	UpdateShaderVariable(commandList);
+
+	// 텍스쳐
 	if (m_texture)
 	{
 		if (m_textureInfo) m_texture->SetTextureInfo(m_textureInfo.get());		
 		m_texture->UpdateShaderVariable(commandList);
 	}
 
-	// 렌더링
+	// 메쉬 렌더링
 	if (m_mesh) m_mesh->Render(commandList);
 }
 

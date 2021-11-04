@@ -17,7 +17,6 @@ public:
 
 	void Update(FLOAT deltaTime);
 	void Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const;
-	void ReleaseUploadBuffer() const;
 
 	void AddGameObject(unique_ptr<GameObject> gameObject);
 	void SetMesh(const shared_ptr<Mesh>& mesh);
