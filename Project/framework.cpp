@@ -21,8 +21,8 @@ void GameFramework::GameLoop()
 	m_timer.Tick();
 	if (m_isActive)
 	{
-		OnMouseEvent();
-		OnKeyboardEvent();
+		OnMouseEvent();		// 실시간 마우스 이벤트
+		OnKeyboardEvent();	// 실시간 키보드 이벤트
 	}
 	OnUpdate(m_timer.GetDeltaTime());
 	OnRender();

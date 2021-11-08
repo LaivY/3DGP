@@ -61,12 +61,11 @@ public:
 	HeightMapTerrain* GetTerrain(FLOAT x, FLOAT z) const;
 
 private:
-	unique_ptr<ResourceManager>				m_resourceManager; // 메쉬, 셰이더, 텍스쳐들을 보관해주는 객체
-
-	vector<unique_ptr<GameObject>>			m_gameObjects;
-	vector<unique_ptr<Instance>>			m_instances;
-	vector<unique_ptr<HeightMapTerrain>>	m_terrains;
-	unique_ptr<Skybox>						m_skybox;
-	shared_ptr<Player>						m_player;
-	shared_ptr<Camera>						m_camera;
+	unique_ptr<ResourceManager>				m_resourceManager;	// 메쉬, 셰이더, 텍스쳐들을 보관해주는 객체
+	vector<unique_ptr<GameObject>>			m_gameObjects;		// 게임오브젝트
+	vector<unique_ptr<Instance>>			m_instances;		// 인스턴싱 객체들
+	vector<unique_ptr<HeightMapTerrain>>	m_terrains;			// 지형
+	unique_ptr<Skybox>						m_skybox;			// 스카이박스
+	shared_ptr<Player>						m_player;			// 플레이어
+	shared_ptr<Camera>						m_camera;			// 카메라
 };

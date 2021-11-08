@@ -149,7 +149,7 @@ VSInstanceOutput VSInstanceMain(VSInstanceInput input)
 float4 PSInstanceMain(VSInstanceOutput input) : SV_TARGET
 {
     float4 color = g_texture.Sample(g_sampler, input.uv);
-    if (color.a == 0.0f)
+    if (color.a < 0.4f)
         discard;
     return color;
 }

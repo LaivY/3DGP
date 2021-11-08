@@ -151,6 +151,7 @@ void BillboardObject::Update(FLOAT deltaTime)
 		FLOAT height{ m_terrain->GetHeight(pos.x, pos.z) };
 		SetPosition(XMFLOAT3{ pos.x, height, pos.z });
 		m_normal = m_terrain->GetNormal(pos.x, pos.z);
+		m_checkTerrain = false;
 	}
 }
 

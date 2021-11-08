@@ -3,11 +3,11 @@
 #include "framework.h"
 
 // 콘솔
-#ifdef UNICODE
-#pragma comment(linker, "/entry:wWinMainCRTStartup /subsystem:console")
-#else
-#pragma comment(linker, "/entry:WinMainCRTStartup /subsystem:console")
-#endif
+//#ifdef UNICODE
+//#pragma comment(linker, "/entry:wWinMainCRTStartup /subsystem:console")
+//#else
+//#pragma comment(linker, "/entry:WinMainCRTStartup /subsystem:console")
+//#endif
 
 #define MAX_LOADSTRING 100
 
@@ -125,6 +125,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_LBUTTONDOWN:
     case WM_LBUTTONUP:
         g_GameFramework.OnMouseEvent(hWnd, message, wParam, lParam);
+        break;
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE)
+            PostQuitMessage(0);
         break;
     case WM_DESTROY:
         PostQuitMessage(0);

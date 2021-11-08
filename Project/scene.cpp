@@ -146,18 +146,18 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	SetPlayer(player);
 	camera->SetPlayer(m_player);
 
-	// 집 생성
-	//for (int i = 0; i < 100; ++i)
-	//{
-	//	float x{ static_cast<float>(rand() % 257) };
-	//	float z{ static_cast<float>(rand() % 257) };
+	// 건물 생성
+	for (int i = 0; i < 100; ++i)
+	{
+		float x{ static_cast<float>(rand() % 257) };
+		float z{ static_cast<float>(rand() % 257) };
 
-	//	unique_ptr<Building> object{ make_unique<Building>() };
-	//	object->SetMesh(m_resourceManager->GetMesh("BUILDING_MESH"));
-	//	object->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
-	//	object->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
-	//	m_gameObjects.push_back(move(object));
-	//}
+		unique_ptr<Building> object{ make_unique<Building>() };
+		object->SetMesh(m_resourceManager->GetMesh("BUILDING_MESH"));
+		object->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
+		object->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
+		m_gameObjects.push_back(move(object));
+	}
 
 	// 나무 생성
 	int row{ 25 }, column{ 25 }, distance{ 10 };
@@ -194,20 +194,6 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	instance->SetShader(m_resourceManager->GetShader("INSTANCE_SHADER"));
 	instance->SetTexture(m_resourceManager->GetTexture("GRASS_TEXTURE"));
 	m_instances.push_back(move(instance));
-
-	// 건물 생성
-	instance = make_unique<Instance>(device, commandList, 100);
-	for (int i = 0; i < 100; ++i)
-	{
-		float x{ static_cast<float>(rand() % 257) };
-		float z{ static_cast<float>(rand() % 257) };
-		unique_ptr<Building> building{ make_unique<Building>() };
-		building->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
-		instance->AddGameObject(move(building));
-	}
-	instance->SetMesh(m_resourceManager->GetMesh("BUILDING_MESH"));
-	instance->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
-	m_instances.push_back(move(instance));
 }
 
 void Scene::OnMouseEvent(HWND hWnd, UINT width, UINT height, FLOAT deltaTime)
@@ -222,7 +208,7 @@ void Scene::OnMouseEvent(HWND hWnd, UINT width, UINT height, FLOAT deltaTime)
 	// 움직인 정도에 비례해서 회전
 	int dx = newMousePosition.x - oldMousePosition.x;
 	int dy = newMousePosition.y - oldMousePosition.y;
-	float sensitive{ 5.0f };
+	float sensitive{ 2.5f };
 	if (m_player) m_player->Rotate(0.0f, dy * sensitive * deltaTime, dx * sensitive * deltaTime);
 
 	// 마우스를 화면 가운데로 이동
@@ -281,9 +267,9 @@ void Scene::OnUpdate(FLOAT deltaTime)
 
 void Scene::Update(FLOAT deltaTime)
 {
-	BulletCollisionCheck();
-	RemoveDeletedGameObjects();
-	UpdateGameObjectsTerrain();
+	BulletCollisionCheck();		// 총알 충돌 판정
+	RemoveDeletedGameObjects(); // 삭제해야할 오브젝트 삭제
+	UpdateGameObjectsTerrain(); // 게임오브젝트들 지형 포인터 설정
 }
 
 void Scene::BulletCollisionCheck()
@@ -330,8 +316,8 @@ void Scene::RemoveDeletedGameObjects()
 
 			// 텍스쳐 정보
 			unique_ptr<TextureInfo> textureInfo{ make_unique<TextureInfo>() };
-			textureInfo->frameInterver *= 1.5f;				// 1 프레임당 보여줄 시간
-			textureInfo->isFrameRepeat = false;				// 끝 프레임까지 가면 객체를 삭제함
+			textureInfo->frameInterver *= 1.5f;				// 1 프레임당 보여줄 시간 (기본 : 1 / 60초)
+			textureInfo->isFrameRepeat = false;				// 마지막 프레임까지 진행되면 객체를 삭제함
 			explosion->SetTextureInfo(textureInfo);
 			explosion->SetCheckTerrain(false);				// 폭발은 지형 위에 있을 필요 없음
 			explosion->SetPosition(object->GetPosition());	// 지형과 닿은 위치에 폭발함
@@ -445,7 +431,7 @@ void Scene::CreateBullet()
 	bullet->SetShader(m_resourceManager->GetShader("TEXTURE_SHADER"));
 	bullet->SetTexture(m_resourceManager->GetTexture("ROCK_TEXTURE"));
 
-	// 탱크 매쉬 피봇이 땅에 있기 때문에 조금 위에서 생성
+	// 탱크 매쉬의 피봇이 땅에 있기 때문에 조금 위에서 생성
 	// 그리고 탱크 포신 길이도 생각해서 조정해줘야함
 	XMFLOAT3 position{ m_player->GetPosition() };
 	position.y += 0.45f;
