@@ -18,7 +18,8 @@ public:
 	void OnDestroy();
 	void OnMouseEvent();
 	void OnMouseEvent(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	void OnKeyboardEvent() const;
+	void OnKeyboardEvent();
+	void OnKeyboardEvent(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 	void Update(FLOAT deltaTime);
 

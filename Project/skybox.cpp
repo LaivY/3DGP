@@ -15,32 +15,32 @@ Skybox::Skybox(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCo
 
 	// 텍스쳐 생성
 	shared_ptr<Texture> frontTexture{ make_shared<Texture>() };
-	frontTexture->LoadTextureFile(device, commandList, TEXT("resource/SkyboxFront.dds"), 2);
+	frontTexture->LoadTextureFile(device, commandList, 2, PATH("SkyboxFront.dds"));
 	frontTexture->CreateSrvDescriptorHeap(device);
 	frontTexture->CreateShaderResourceView(device);
 
 	shared_ptr<Texture> leftTexture{ make_shared<Texture>() };
-	leftTexture->LoadTextureFile(device, commandList, TEXT("resource/SkyboxLeft.dds"), 2);
+	leftTexture->LoadTextureFile(device, commandList, 2, PATH("SkyboxLeft.dds"));
 	leftTexture->CreateSrvDescriptorHeap(device);
 	leftTexture->CreateShaderResourceView(device);
 
 	shared_ptr<Texture> rightTexture{ make_shared<Texture>() };
-	rightTexture->LoadTextureFile(device, commandList, TEXT("resource/SkyboxRight.dds"), 2);
+	rightTexture->LoadTextureFile(device, commandList, 2, PATH("SkyboxRight.dds"));
 	rightTexture->CreateSrvDescriptorHeap(device);
 	rightTexture->CreateShaderResourceView(device);
 
 	shared_ptr<Texture> backTexture{ make_shared<Texture>() };
-	backTexture->LoadTextureFile(device, commandList, TEXT("resource/SkyboxBack.dds"), 2);
+	backTexture->LoadTextureFile(device, commandList, 2, PATH("SkyboxBack.dds"));
 	backTexture->CreateSrvDescriptorHeap(device);
 	backTexture->CreateShaderResourceView(device);
 
 	shared_ptr<Texture> topTexture{ make_shared<Texture>() };
-	topTexture->LoadTextureFile(device, commandList, TEXT("resource/SkyboxTop.dds"), 2);
+	topTexture->LoadTextureFile(device, commandList, 2, PATH("SkyboxTop.dds"));
 	topTexture->CreateSrvDescriptorHeap(device);
 	topTexture->CreateShaderResourceView(device);
 
 	shared_ptr<Texture> botTexture{ make_shared<Texture>() };
-	botTexture->LoadTextureFile(device, commandList, TEXT("resource/SkyboxBot.dds"), 2);
+	botTexture->LoadTextureFile(device, commandList, 2, PATH("SkyboxBot.dds"));
 	botTexture->CreateSrvDescriptorHeap(device);
 	botTexture->CreateShaderResourceView(device);
 

@@ -8,57 +8,16 @@ Mesh::Mesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsComman
 	if (indexData) CreateIndexBuffer(device, commandList, indexData, indexDataCount);
 }
 
-Mesh::Mesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const string& fileName, D3D_PRIMITIVE_TOPOLOGY primitiveTopology)
-	: m_primitiveTopology{ primitiveTopology }
+void Mesh::Render(const ComPtr<ID3D12GraphicsCommandList>& m_commandList) const
 {
-	vector<ColorVertex> vertices;
-	vector<UINT> indices;
-
-	ifstream file{ fileName };
-	string line;
-	while (getline(file, line))
-	{
-		stringstream ss{ line };
-		vector<string> data{ istream_iterator<string>(ss), {} };
-		if (data.empty()) continue;
-		if (data[0] == "v")
-		{
-			XMFLOAT3 position{ 
-				strtof(data[1].c_str(), NULL), 
-				strtof(data[2].c_str(), NULL), 
-				strtof(data[3].c_str(), NULL) 
-			};
-			XMFLOAT4 color{
-				static_cast<float>(rand()) / static_cast<float>(RAND_MAX),
-				static_cast<float>(rand()) / static_cast<float>(RAND_MAX),
-				static_cast<float>(rand()) / static_cast<float>(RAND_MAX),
-				1.0f };
-			vertices.emplace_back(position, color);
-		}
-		else if (data[0] == "f")
-		{
-			indices.push_back(atoi(data[1].c_str()) - 1);
-			indices.push_back(atoi(data[2].c_str()) - 1);
-			indices.push_back(atoi(data[3].c_str()) - 1);
-		}
-	}
-	CreateVertexBuffer(device, commandList, vertices.data(), sizeof(ColorVertex), vertices.size());
-	CreateIndexBuffer(device, commandList, indices.data(), indices.size());
-}
-
-void Mesh::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
-{
-	commandList->IASetPrimitiveTopology(m_primitiveTopology);
-	commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+	m_commandList->IASetPrimitiveTopology(m_primitiveTopology);
+	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 	if (m_nIndices)
 	{
-		commandList->IASetIndexBuffer(&m_indexBufferView);
-		commandList->DrawIndexedInstanced(m_nIndices, 1, 0, 0, 0);
+		m_commandList->IASetIndexBuffer(&m_indexBufferView);
+		m_commandList->DrawIndexedInstanced(m_nIndices, 1, 0, 0, 0);
 	}
-	else
-	{
-		commandList->DrawInstanced(m_nVertices, 1, 0, 0);
-	}
+	else m_commandList->DrawInstanced(m_nVertices, 1, 0, 0);
 }
 
 void Mesh::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, const D3D12_VERTEX_BUFFER_VIEW& instanceBufferView, UINT count) const
@@ -114,7 +73,7 @@ CubeMesh::CubeMesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	// 큐브 가로, 세로, 높이
-	FLOAT sx{ width }, sz{ length }, sy{ height };
+	FLOAT sx{ width }, sy{ length }, sz{ height };
 
 	// 앞면
 	vector<TextureVertex> vertices;

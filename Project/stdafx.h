@@ -13,13 +13,11 @@
 #include <tchar.h>
 #include <wrl.h>
 #include <algorithm>
-#include <fstream>
-#include <iostream>
+#include <array>
 #include <exception>
-#include <string>
-#include <sstream>
-#include <vector>
+#include <iostream>
 #include <map>
+#include <vector>
 using namespace std;
 using Microsoft::WRL::ComPtr;
 
@@ -33,7 +31,6 @@ using Microsoft::WRL::ComPtr;
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
 #include <d3d12sdklayers.h>
-#include <DirectXCollision.h>
 #include "d3dx12.h"
 using namespace DirectX;
 
@@ -139,3 +136,5 @@ extern UINT g_cbvSrvDescriptorIncrementSize; // 상수버퍼뷰, 셰이더리소
 
 ComPtr<ID3D12Resource> CreateBufferResource(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const void* data, UINT sizePerData, UINT dataCount,
     D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES resourceState, ComPtr<ID3D12Resource>& uploadBuffer);
+
+wstring PATH(const string& fileName);

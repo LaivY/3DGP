@@ -54,18 +54,21 @@ ComPtr<ID3D12Resource> CreateBufferResource(const ComPtr<ID3D12Device>& device, 
 			IID_PPV_ARGS(&buffer)));
 
 		// 데이터 복사
-		if (data)
-		{
-			UINT8* pBufferDataBegin{ NULL };
-			CD3DX12_RANGE readRange{ 0, 0 };
-			DX::ThrowIfFailed(buffer->Map(0, &readRange, reinterpret_cast<void**>(&pBufferDataBegin)));
-			memcpy(pBufferDataBegin, data, bufferSize);
-			buffer->Unmap(0, NULL);
-		}
+		UINT8* pBufferDataBegin{ NULL };
+		CD3DX12_RANGE readRange{ 0, 0 };
+		DX::ThrowIfFailed(buffer->Map(0, &readRange, reinterpret_cast<void**>(&pBufferDataBegin)));
+		memcpy(pBufferDataBegin, data, bufferSize);
+		buffer->Unmap(0, NULL);
 
 		// 리소스 베리어 설정
-		//commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resourceState));
+		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, resourceState));
 		return buffer;
 	}
 	return NULL;
+}
+
+wstring PATH(const string& filePath)
+{
+	wstring wStr{ filePath.begin(), filePath.end() };
+	return TEXT("resource/") + wStr;
 }

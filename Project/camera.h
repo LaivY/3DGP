@@ -23,7 +23,6 @@ public:
 	void SetAt(const XMFLOAT3& at) { m_look = at;	UpdateLocalAxis(); }
 	void SetUp(const XMFLOAT3& up) { m_up = up;		UpdateLocalAxis(); }
 	void SetPlayer(const shared_ptr<Player>& player);
-	void SetTerrain(HeightMapTerrain* terrain) { m_terrain = terrain; }
 
 	XMFLOAT4X4 GetViewMatrix() const { return m_viewMatrix; }
 	XMFLOAT4X4 GetProjMatrix() const { return m_projMatrix; }
@@ -49,7 +48,6 @@ protected:
 	FLOAT				m_yaw;			// z축 회전각
 
 	shared_ptr<Player>	m_player;		// 플레이어
-	HeightMapTerrain*	m_terrain;		// 카메라가 위치해있는 지형
 };
 
 class ThirdPersonCamera : public Camera

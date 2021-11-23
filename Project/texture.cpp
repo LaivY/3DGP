@@ -1,6 +1,6 @@
 #include "texture.h"
 
-void Texture::LoadTextureFile(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const wstring& fileName, UINT rootParameterIndex)
+void Texture::LoadTextureFile(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, UINT rootParameterIndex, const wstring& fileName)
 {
 	ComPtr<ID3D12Resource> textureBuffer;
 	ComPtr<ID3D12Resource> textureUploadBuffer;
@@ -48,7 +48,7 @@ void Texture::CreateSrvDescriptorHeap(const ComPtr<ID3D12Device>& device)
 
 void Texture::CreateShaderResourceView(const ComPtr<ID3D12Device>& device)
 {
-	CD3DX12_CPU_DESCRIPTOR_HANDLE srvDescriptorHandle{ m_srvHeap->GetCPUDescriptorHandleForHeapStart() };
+	D3D12_CPU_DESCRIPTOR_HANDLE srvDescriptorHeapStart{ m_srvHeap->GetCPUDescriptorHandleForHeapStart() };
 	for (const auto& [texture, _] : m_textures)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -56,8 +56,8 @@ void Texture::CreateShaderResourceView(const ComPtr<ID3D12Device>& device)
 		srvDesc.Format = texture->GetDesc().Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = -1;
-		device->CreateShaderResourceView(texture.Get(), &srvDesc, srvDescriptorHandle);
-		srvDescriptorHandle.Offset(g_cbvSrvDescriptorIncrementSize);
+		device->CreateShaderResourceView(texture.Get(), &srvDesc, srvDescriptorHeapStart);
+		srvDescriptorHeapStart.ptr += g_cbvSrvDescriptorIncrementSize;
 	}
 }
 
@@ -79,14 +79,6 @@ void Texture::UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& comm
 			auto [_, rootParameterIndex] = m_textures[i];
 			commandList->SetGraphicsRootDescriptorTable(rootParameterIndex, srvDescriptorHandle);
 			srvDescriptorHandle.Offset(g_cbvSrvDescriptorIncrementSize);
-
-			// Texture2D roadTexture[2]
-			// 2개짜리 배열이기 때문에 다음 1개는 건너뛴다.
-			if (rootParameterIndex == 4)
-			{
-				srvDescriptorHandle.Offset(g_cbvSrvDescriptorIncrementSize);
-				++i;
-			}
 		}
 	}
 }

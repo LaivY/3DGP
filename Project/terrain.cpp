@@ -8,7 +8,7 @@ HeightMapImage::HeightMapImage(const wstring& fileName, INT width, INT length, X
 	unique_ptr<BYTE[]> buffer{ new BYTE[m_width * m_length] };
 	HANDLE hFile{ CreateFile(fileName.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL) };
 	DWORD bytesRead;
-	ReadFile(hFile, buffer.get(), m_width * m_length, &bytesRead, NULL);
+	ReadFile(hFile, buffer.get(), m_width* m_length, &bytesRead, NULL);
 	CloseHandle(hFile);
 
 	// 높이맵 이미지는 좌상단이 (0, 0)이고 우리가 원하는 좌표계는 좌하단이 (0, 0)이므로 상하대칭 시켜서 저장한다.
@@ -77,7 +77,8 @@ HeightMapGridMesh::HeightMapGridMesh(const ComPtr<ID3D12Device>& device, const C
 			vertices.emplace_back(
 				XMFLOAT3{ x * scale.x, heightMapImage->GetHeight(x, z) * scale.y, z * scale.z },
 				XMFLOAT2{ (float)x / (float)heightMapImage->GetWidth(), 1.0f - ((float)z / (float)heightMapImage->GetLength()) },
-				XMFLOAT2{ (float)x / (float)scale.x * 0.5f, (float)z / (float)scale.z * 0.5f });
+				XMFLOAT2{ (float)x / (float)scale.x * 1.5f, (float)z / (float)scale.z * 1.5f }
+			);
 	CreateVertexBuffer(device, commandList, vertices.data(), sizeof(Texture2Vertex), vertices.size());
 
 	// 인덱스 데이터 설정, 인덱스 버퍼 생성
@@ -107,34 +108,58 @@ HeightMapGridMesh::HeightMapGridMesh(const ComPtr<ID3D12Device>& device, const C
 	CreateIndexBuffer(device, commandList, indices.data(), indices.size());
 }
 
-FLOAT HeightMapGridMesh::GetHeight(HeightMapImage* heightMapImage, INT x, INT z) const
-{
-	BYTE* pixels{ heightMapImage->GetPixels() };
-	return pixels[x + z * heightMapImage->GetWidth()] * heightMapImage->GetScale().y;
-}
+// --------------------------------------
 
+HeightMapGridTessMesh::HeightMapGridTessMesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList,
+	HeightMapImage* heightMapImage, INT xStart, INT zStart, INT width, INT length, XMFLOAT3 scale)
+{
+	// 인덱스 없음
+	m_nIndices = 0;
+
+	// 한 블럭은 정점 25개로 이루어져있음
+	m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST;
+
+	// 정점 간의 가로, 세로 거리
+	int widthStride{ width / 4 };
+	int lengthStride{ length / 4 };
+
+	float heightMapImageWidth{ static_cast<float>(heightMapImage->GetWidth()) };
+	float heightMapImageLength{ static_cast<float>(heightMapImage->GetLength()) };
+
+	// (-x, +z)(=좌측상단)에서부터 (+x, -z)(=우측하단)까지
+	vector<Texture2Vertex> vertices;
+	for (int z = zStart + length; z >= zStart; z -= lengthStride)
+		for (int x = xStart; x <= xStart + width; x += widthStride)
+			vertices.emplace_back(
+				XMFLOAT3{ x * scale.x, heightMapImage->GetHeight(x, z) * scale.y, z * scale.z },
+				XMFLOAT2{ (float)x / heightMapImageWidth, 1.0f - ((float)z / heightMapImageLength) },
+				XMFLOAT2{ (float)x / scale.x * 1.5f, (float)z / scale.z * 1.5f }
+			);
+
+	CreateVertexBuffer(device, commandList, vertices.data(), sizeof(Texture2Vertex), vertices.size());
+}
 // --------------------------------------
 
 HeightMapTerrain::HeightMapTerrain(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList,
 	const wstring& fileName, const shared_ptr<Shader>& shader, const shared_ptr<Texture>& texture, INT width, INT length, INT blockWidth, INT blockLength, XMFLOAT3 scale)
-	: m_width{ width }, m_length{ length }, m_scale{ scale }
+	: m_width{ width }, m_length{ length }, m_blockWidth{ blockWidth }, m_blockLength{ blockLength }, m_scale{ scale }
 {
 	// 높이맵이미지 로딩
 	m_heightMapImage = make_unique<HeightMapImage>(fileName, m_width, m_length, m_scale);
 
 	// 가로, 세로 블록의 개수
-	int widthBlockCount{ m_width / blockWidth };
-	int lengthBlockCount{ m_length / blockLength };
+	int widthBlockCount{ m_width / m_blockWidth };
+	int lengthBlockCount{ m_length / m_blockLength };
 
 	// 블록 생성
 	for (int z = 0; z < lengthBlockCount; ++z)
 		for (int x = 0; x < widthBlockCount; ++x)
 		{
-			int xStart{ x * (blockWidth - 1) };
-			int zStart{ z * (blockLength - 1) };
+			int xStart{ x * m_blockWidth };
+			int zStart{ z * m_blockLength };
 			unique_ptr<GameObject> block{ make_unique<GameObject>() };
-			shared_ptr<HeightMapGridMesh> mesh{
-				make_shared<HeightMapGridMesh>(device, commandList, m_heightMapImage.get(), xStart, zStart, blockWidth, blockLength, m_scale)
+			shared_ptr<HeightMapGridTessMesh> mesh{
+				make_shared<HeightMapGridTessMesh>(device, commandList, m_heightMapImage.get(), xStart, zStart, m_blockWidth, m_blockLength, m_scale)
 			};
 			block->SetMesh(mesh);
 			block->SetShader(shader);
@@ -163,14 +188,14 @@ void HeightMapTerrain::Rotate(FLOAT roll, FLOAT pitch, FLOAT yaw)
 
 void HeightMapTerrain::SetPosition(const XMFLOAT3& position)
 {
-	// 지형의 위치 설정은 모든 블록들의 위치를 조정한다는 것임
 	for (auto& block : m_blocks)
 		block->SetPosition(position);
 }
 
-XMFLOAT3 HeightMapTerrain::GetPosition() const
+void HeightMapTerrain::SetShader(const shared_ptr<Shader>& shader)
 {
-	return m_blocks.front()->GetPosition();
+	for (auto& block : m_blocks)
+		block->SetShader(shader);
 }
 
 FLOAT HeightMapTerrain::GetHeight(FLOAT x, FLOAT z) const
@@ -181,19 +206,17 @@ FLOAT HeightMapTerrain::GetHeight(FLOAT x, FLOAT z) const
 	// 지형의 시작점 반영
 	XMFLOAT3 pos{ GetPosition() };
 	x -= pos.x;
-	z -= pos.z;	
+	z -= pos.z;
 
 	// 지형의 스케일 반영
 	x /= m_scale.x;
 	z /= m_scale.z;
-	
+
 	return pos.y + m_heightMapImage->GetHeight(x, z) * m_scale.y;
 }
 
 XMFLOAT3 HeightMapTerrain::GetNormal(FLOAT x, FLOAT z) const
 {
-	// 파라미터로 들어온 (x, z)는 플레이어의 위치이다.
-
 	XMFLOAT3 pos{ GetPosition() };
 	x -= pos.x; x /= m_scale.x;
 	z -= pos.z; z /= m_scale.z;
@@ -212,4 +235,18 @@ XMFLOAT3 HeightMapTerrain::GetNormal(FLOAT x, FLOAT z) const
 	XMFLOAT3 bot{ Vector3::Add(Vector3::Mul(LB, 1.0f - fx), Vector3::Mul(RB, fx)) };
 	XMFLOAT3 top{ Vector3::Add(Vector3::Mul(LT, 1.0f - fx), Vector3::Mul(RT, fx)) };
 	return Vector3::Normalize(Vector3::Add(Vector3::Mul(bot, 1.0f - fz), Vector3::Mul(top, fz)));
+}
+
+XMFLOAT3 HeightMapTerrain::GetPosition() const
+{
+	return m_blocks.front()->GetPosition();
+}
+
+XMFLOAT3 HeightMapTerrain::GetBlockPosition(FLOAT x, FLOAT z)
+{
+	// (x, z) 좌표를 포함하는 블록의 좌측하단 좌표를 반환한다. y값은 항상 0이다.
+	XMFLOAT3 pos{ GetPosition() };
+	int bx{ static_cast<int>((x - pos.x) / m_blockWidth) };
+	int bz{ static_cast<int>((z - pos.z) / m_blockLength) };
+	return { pos.x + bx * m_blockWidth, 0.0f, pos.z + bz * m_blockLength };
 }

@@ -3,7 +3,7 @@
 Camera::Camera() :
 	m_eye{ 0.0f, 0.0f, 0.0f }, m_look{ 0.0f, 0.0f, 1.0f }, m_up{ 0.0f, 1.0f, 0.0f },
 	m_u{ 1.0f, 0.0f, 0.0f }, m_v{ 0.0f, 1.0f, 0.0f }, m_n{ 0.0f, 0.0f, 1.0f },
-	m_roll{ 0.0f }, m_pitch{ 0.0f }, m_yaw{ 0.0f }, m_terrain{ nullptr }
+	m_roll{ 0.0f }, m_pitch{ 0.0f }, m_yaw{ 0.0f }
 {
 	XMStoreFloat4x4(&m_viewMatrix, XMMatrixIdentity());
 	XMStoreFloat4x4(&m_projMatrix, XMMatrixIdentity());
@@ -11,15 +11,6 @@ Camera::Camera() :
 
 void Camera::Update(FLOAT deltaTime)
 {
-	// 카메라가 지형 밑으로 내려가지 않도록함
-	if (m_terrain)
-	{
-		XMFLOAT3 pos{ GetEye() };
-		FLOAT height{ m_terrain->GetHeight(pos.x, pos.z) };
-		if (pos.y < height + 0.5f)
-			SetEye(XMFLOAT3{ pos.x, height + 0.5f, pos.z });
-	}
-
 	// 카메라 뷰 변환 행렬 최신화
 	XMStoreFloat4x4(&m_viewMatrix, XMMatrixLookAtLH(XMLoadFloat3(&m_eye), XMLoadFloat3(&Vector3::Add(m_eye, m_look)), XMLoadFloat3(&m_up)));
 }
@@ -35,6 +26,7 @@ void Camera::UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& comma
 
 	commandList->SetGraphicsRoot32BitConstants(1, 16, &transViewMatrix, 0);
 	commandList->SetGraphicsRoot32BitConstants(1, 16, &transProjMatrix, 16);
+	commandList->SetGraphicsRoot32BitConstants(1, 3, &GetEye(), 32);
 }
 
 void Camera::UpdateLocalAxis()
@@ -94,7 +86,7 @@ void Camera::SetPlayer(const shared_ptr<Player>& player)
 
 // --------------------------------------
 
-ThirdPersonCamera::ThirdPersonCamera() : Camera{}, m_offset{ 0.0f, 1.0f, -10.0f }, m_delay{ 0.01f }
+ThirdPersonCamera::ThirdPersonCamera() : Camera{}, m_offset{ 0.0f, 1.0f, -5.0f }, m_delay{ 0.01f }
 {
 
 }
@@ -132,5 +124,8 @@ void ThirdPersonCamera::Rotate(FLOAT roll, FLOAT pitch, FLOAT yaw)
 	// 항상 플레이어를 바라보도록 설정
 	XMFLOAT3 look{ Vector3::Sub(m_player->GetPosition(), m_eye) };
 	if (Vector3::Length(look))
-		SetAt(look);
+	{
+		m_look = look;
+		UpdateLocalAxis();
+	}
 }

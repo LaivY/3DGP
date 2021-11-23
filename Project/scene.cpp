@@ -36,164 +36,106 @@ shared_ptr<Texture> ResourceManager::GetTexture(const string& key) const
 
 void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const ComPtr<ID3D12RootSignature>& rootSignature, FLOAT aspectRatio)
 {
-	// 메쉬, 셰이더, 텍스쳐들은 모두 ResourceManager에 있는 map에 담는다.
-	// ResourceManager::Add 함수를 통해 리소스를 추가하고 ResourceManager::Get 함수를 통해 리소스를 불러올 수 있다.
-	// class ResourceManager가 있으므로서 나중에 객체를 생성할 때 필요한 Mesh, Shader, Texture를 미리 생성해둘 수 있다.
-
-	// 리소스들 담고있을 ResourceManager 생성
+	// 리소스매니저 생성
 	m_resourceManager = make_unique<ResourceManager>();
 
-	// 필요한 메쉬들 생성
-	shared_ptr<CubeMesh> cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
-	shared_ptr<CubeMesh> bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.5f, 0.1f) };
-	shared_ptr<TextureRectMesh> treeMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{}) };
-	shared_ptr<TextureRectMesh> grassMesh{ make_shared<TextureRectMesh>(device, commandList, 3.0f, 0.0f, 1.5f, XMFLOAT3{}) };
-	shared_ptr<TextureRectMesh> explosionMesh{ make_shared<TextureRectMesh>(device, commandList, 5.0f, 0.0f, 5.0f, XMFLOAT3{}) };
-	shared_ptr<Mesh> tankMesh{ make_shared<Mesh>(device, commandList, "resource/tank.obj") };
-	shared_ptr<Mesh> buildingMesh{ make_shared<Mesh>(device, commandList, "resource/building.obj") };
+	// 메쉬 생성
+	auto cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
+	auto bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.1f, 0.1f) };
+	auto explosionMesh{ make_shared<TextureRectMesh>(device, commandList, 5.0f, 0.0f, 5.0f, XMFLOAT3{}) };
+	auto mirrorMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{ 0.0f, 0.0f, 0.1f }) };
+	
+	// 셰이더 생성
+	auto shader{ make_shared<Shader>(device, rootSignature) };
+	auto terrainShader{ make_shared<TerrainShader>(device, rootSignature) };
+	auto terrainTessShader{ make_shared<TerrainTessShader>(device, rootSignature) };
+	auto terrainTessWireShader{ make_shared<TerrainTessWireShader>(device, rootSignature) };
+	auto blendingShader{ make_shared<BlendingShader>(device, rootSignature) };
+	auto blendingDepthShader{ make_shared<BlendingDepthShader>(device, rootSignature) };
+	auto stencilShader{ make_shared<StencilShader>(device, rootSignature) };
+	auto mirrorShader{ make_shared<MirrorShader>(device, rootSignature) };
 
-	// 필요한 셰이더들 생성
-	shared_ptr<Shader> colorShader{ make_shared<Shader>(device, rootSignature) };
-	shared_ptr<TextureShader> textureShader{ make_shared<TextureShader>(device, rootSignature) };
-	shared_ptr<TerrainShader> terrainShader{ make_shared<TerrainShader>(device, rootSignature) };
-	shared_ptr<InstanceShader> instanceShader{ make_shared<InstanceShader>(device, rootSignature) };
-
-	// 필요한 텍스쳐들 생성
-	shared_ptr<Texture> rockTexture{ make_shared<Texture>() };
-	rockTexture->LoadTextureFile(device, commandList, TEXT("resource/rock.dds"), 2);
+	// 텍스쳐 생성
+	auto rockTexture{ make_shared<Texture>() };
+	rockTexture->LoadTextureFile(device, commandList, 2, PATH("Rock.dds"));
 	rockTexture->CreateSrvDescriptorHeap(device);
 	rockTexture->CreateShaderResourceView(device);
 
-	shared_ptr<Texture> treeTexture{ make_shared<Texture>() };
-	treeTexture->LoadTextureFile(device, commandList, TEXT("resource/tree.dds"), 2);
-	treeTexture->CreateSrvDescriptorHeap(device);
-	treeTexture->CreateShaderResourceView(device);
-
-	shared_ptr<Texture> grassTexture{ make_shared<Texture>() };
-	grassTexture->LoadTextureFile(device, commandList, TEXT("resource/grass.dds"), 2);
-	grassTexture->CreateSrvDescriptorHeap(device);
-	grassTexture->CreateShaderResourceView(device);
-
-	shared_ptr<Texture> terrainTexture{ make_shared<Texture>() };
-	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/BaseTerrain.dds"), 2);		// BaseTexture
-	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/DetailTerrain.dds"), 3);	// DetailTexture
-
-	// roadTexture[2] : 이렇게 배열로되어 있는 루트파라미터의 경우에는 이후에 로드하는 텍스쳐는 이전의 루트파라미터에 묶인다.
-	// 아래와 같은 경우 도로의 디테일 텍스쳐를 로드할 때 4번째 파라미터의 숫자는 아무 상관 없다.
-	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/road.dds"), 4);				// roadTexture[0]
-	terrainTexture->LoadTextureFile(device, commandList, TEXT("resource/roadDetail.dds"), 4);		// roadTexture[1]
+	auto terrainTexture{ make_shared<Texture>() };
+	terrainTexture->LoadTextureFile(device, commandList, 2, PATH("BaseTerrain.dds"));
+	terrainTexture->LoadTextureFile(device, commandList, 3, PATH("DetailTerrain.dds"));
 	terrainTexture->CreateSrvDescriptorHeap(device);
 	terrainTexture->CreateShaderResourceView(device);
 
-	shared_ptr<Texture> explosionTexture{ make_shared<Texture>() };
+	auto explosionTexture{ make_shared<Texture>() };
 	for (int i = 1; i <= 33; ++i)
-		explosionTexture->LoadTextureFile(device, commandList, TEXT("resource/explosion (") + to_wstring(i) + TEXT(").dds"), 2);
+		explosionTexture->LoadTextureFile(device, commandList, 2, PATH("explosion (" + to_string(i) + ").dds"));
 	explosionTexture->CreateSrvDescriptorHeap(device);
 	explosionTexture->CreateShaderResourceView(device);
 
-	// 리소스 보관 객체에 저장
-	m_resourceManager->AddMesh("CUBE_MESH", cubeMesh);
-	m_resourceManager->AddMesh("BULLET_MESH", bulletMesh);
-	m_resourceManager->AddMesh("TREE_MESH", treeMesh);
-	m_resourceManager->AddMesh("GRASS_MESH", grassMesh);
-	m_resourceManager->AddMesh("EXPLOSION_MESH", explosionMesh);
-	m_resourceManager->AddMesh("TANK_MESH", tankMesh);
-	m_resourceManager->AddMesh("BUILDING_MESH", buildingMesh);
+	auto mirrorTexture{ make_shared<Texture>() };
+	mirrorTexture->LoadTextureFile(device, commandList, 2, PATH("Pink.dds"));
+	mirrorTexture->CreateSrvDescriptorHeap(device);
+	mirrorTexture->CreateShaderResourceView(device);
 
-	m_resourceManager->AddShader("COLOR_SHADER", colorShader);
-	m_resourceManager->AddShader("TEXTURE_SHADER", textureShader);
-	m_resourceManager->AddShader("TERRAIN_SHADER", terrainShader);
-	m_resourceManager->AddShader("INSTANCE_SHADER", instanceShader);
-
-	m_resourceManager->AddTexture("ROCK_TEXTURE", rockTexture);
-	m_resourceManager->AddTexture("TREE_TEXTURE", treeTexture);
-	m_resourceManager->AddTexture("GRASS_TEXTURE", grassTexture);
-	m_resourceManager->AddTexture("TERRAIN_TEXTURE", terrainTexture);
-	m_resourceManager->AddTexture("EXPLOSION_TEXTURE", explosionTexture);
-
-	// 지형 생성
-	unique_ptr<HeightMapTerrain> terrain{
-		make_unique<HeightMapTerrain>(device, commandList, TEXT("resource/heightMap.raw"),
-		m_resourceManager->GetShader("TERRAIN_SHADER"), m_resourceManager->GetTexture("TERRAIN_TEXTURE"), 257, 257, 257, 257, XMFLOAT3{ 1.0f, 0.2f, 1.0f })
-	};
-	terrain->SetPosition(XMFLOAT3{ -127.5f, -100.0f, -127.5f });
-	m_terrains.push_back(move(terrain));
+	// 리소스매니저에 리소스 추가
+	m_resourceManager->AddMesh("CUBE", cubeMesh);
+	m_resourceManager->AddMesh("BULLET", bulletMesh);
+	m_resourceManager->AddMesh("EXPLOSION", explosionMesh);
+	m_resourceManager->AddMesh("MIRROR", mirrorMesh);
+	m_resourceManager->AddShader("TEXTURE", shader);
+	m_resourceManager->AddShader("TERRAIN", terrainShader);
+	m_resourceManager->AddShader("TERRAINTESSWIRE", terrainTessWireShader);
+	m_resourceManager->AddShader("TERRAINTESS", terrainTessShader);
+	m_resourceManager->AddShader("BLENDING", blendingShader);
+	m_resourceManager->AddShader("BLENDINGDEPTH", blendingDepthShader);
+	m_resourceManager->AddShader("STENCIL", stencilShader);
+	m_resourceManager->AddShader("MIRROR", mirrorShader);
+	m_resourceManager->AddTexture("ROCK", rockTexture);
+	m_resourceManager->AddTexture("TERRAIN", terrainTexture);
+	m_resourceManager->AddTexture("EXPLOSION", explosionTexture);
+	m_resourceManager->AddTexture("MIRROR", mirrorTexture);
 
 	// 카메라 생성
-	shared_ptr<ThirdPersonCamera> camera{ make_shared<ThirdPersonCamera>() };
-	camera->SetEye(XMFLOAT3{ 0.0f, 0.0f, 0.0f });
-	camera->SetAt(XMFLOAT3{ 0.0f, 0.0f, 1.0f });
-	camera->SetUp(XMFLOAT3{ 0.0f, 1.0f, 0.0f });
+	auto camera{ make_shared<ThirdPersonCamera>() };
 	SetCamera(camera);
 
 	// 카메라 투영 행렬 설정
 	XMFLOAT4X4 projMatrix;
-	XMStoreFloat4x4(&projMatrix, XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 0.1f, 3000.0f));
+	XMStoreFloat4x4(&projMatrix, XMMatrixPerspectiveFovLH(0.25f * XM_PI, aspectRatio, 1.0f, 5000.0f));
 	camera->SetProjMatrix(projMatrix);
 
+	// 플레이어 생성
+	auto player{ make_shared<Player>() };
+	player->SetMesh(m_resourceManager->GetMesh("CUBE"));
+	player->SetShader(m_resourceManager->GetShader("TEXTURE"));
+	player->SetTexture(m_resourceManager->GetTexture("ROCK"));
+	SetPlayer(player);
+
+	// 카메라, 플레이어 서로 설정
+	camera->SetPlayer(player);
+	player->SetCamera(camera);
+
 	// 스카이박스 생성
-	unique_ptr<Skybox> skybox{ make_unique<Skybox>(device, commandList, rootSignature) };
+	auto skybox{ make_unique<Skybox>(device, commandList, rootSignature) };
 	skybox->SetCamera(camera);
 	SetSkybox(skybox);
 
-	// 플레이어 생성
-	shared_ptr<Player> player{ make_shared<Player>() };
-	player->SetMesh(m_resourceManager->GetMesh("TANK_MESH"));
-	player->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
-	player->SetCamera(camera);
+	// 지형 생성
+	// 한 블록 당 25개의 정점으로 이루어져있으므로 블록 너비, 길이는 4의 배수여야한다.
+	XMFLOAT3 terrainScale{ 2.0f, 0.2f, 2.0f };
+	auto terrain{ make_unique<HeightMapTerrain>(device, commandList, PATH("HeightMap.raw"), m_resourceManager->GetShader("TERRAINTESS"), 
+												m_resourceManager->GetTexture("TERRAIN"), 257, 257, 12, 12, terrainScale) };
+	terrain->SetPosition({ 0.0f, 0.0f, 0.0f });
+	m_terrains.push_back(move(terrain));
 
-	// 씬, 카메라 플레이어 설정
-	SetPlayer(player);
-	camera->SetPlayer(m_player);
-
-	// 건물 생성
-	for (int i = 0; i < 100; ++i)
-	{
-		float x{ static_cast<float>(rand() % 257) };
-		float z{ static_cast<float>(rand() % 257) };
-
-		unique_ptr<Building> object{ make_unique<Building>() };
-		object->SetMesh(m_resourceManager->GetMesh("BUILDING_MESH"));
-		object->SetShader(m_resourceManager->GetShader("COLOR_SHADER"));
-		object->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
-		m_gameObjects.push_back(move(object));
-	}
-
-	// 나무 생성
-	int row{ 25 }, column{ 25 }, distance{ 10 };
-	unique_ptr<Instance> instance{ make_unique<Instance>(device, commandList, row * column) };
-	for (int i = 0; i < row * column; ++i)
-	{
-		float x{ static_cast<float>(i % row * distance) };
-		float z{ static_cast<float>(i / row * distance) };
-
-		unique_ptr<BillboardObject> obj{ make_unique<BillboardObject>(camera, XMFLOAT3{ 0.0f, 5.0f, 0.0f }) };
-		obj->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
-		instance->AddGameObject(move(obj));
-	}
-	instance->SetMesh(m_resourceManager->GetMesh("TREE_MESH"));
-	instance->SetShader(m_resourceManager->GetShader("INSTANCE_SHADER"));
-	instance->SetTexture(m_resourceManager->GetTexture("TREE_TEXTURE"));
-	m_instances.push_back(move(instance));
-
-	// 풀 생성
-	row = 50; column = 50; distance = 5;
-	instance = make_unique<Instance>(device, commandList, row * column);
-	for (int i = 0; i < row * column; ++i)
-	{
-		float x{ static_cast<float>(i % row * distance) };
-		float z{ static_cast<float>(i / row * distance) };
-
-		if (fmod(x, 10) == 0.0f) continue; // 나무 있는 곳은 생성 안함
-
-		unique_ptr<BillboardObject> obj{ make_unique<BillboardObject>(camera, XMFLOAT3{ 0.0f, 1.5f / 2.0f, 0.0f }) };
-		obj->SetPosition(XMFLOAT3{ x - 127.5f, 0.0f, z - 127.5f });
-		instance->AddGameObject(move(obj));
-	}
-	instance->SetMesh(m_resourceManager->GetMesh("GRASS_MESH"));
-	instance->SetShader(m_resourceManager->GetShader("INSTANCE_SHADER"));
-	instance->SetTexture(m_resourceManager->GetTexture("GRASS_TEXTURE"));
-	m_instances.push_back(move(instance));
+	// 거울 생성
+	auto mirror{ make_unique<GameObject>() };
+	mirror->SetPosition(XMFLOAT3{ 30.0f, 27.0f, 15.0f });
+	mirror->SetMesh(m_resourceManager->GetMesh("MIRROR"));
+	mirror->SetShader(m_resourceManager->GetShader("BLENDINGDEPTH"));
+	mirror->SetTexture(m_resourceManager->GetTexture("MIRROR"));
+	m_mirror = move(mirror);
 }
 
 void Scene::OnMouseEvent(HWND hWnd, UINT width, UINT height, FLOAT deltaTime)
@@ -217,15 +159,10 @@ void Scene::OnMouseEvent(HWND hWnd, UINT width, UINT height, FLOAT deltaTime)
 
 void Scene::OnMouseEvent(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	switch (message)
-	{
-	case WM_LBUTTONDOWN:
-		CreateBullet();
-		break;
-	}
+	CreateBullet();
 }
 
-void Scene::OnKeyboardEvent(FLOAT deltaTime) const
+void Scene::OnKeyboardEvent(FLOAT deltaTime)
 {
 	if (GetAsyncKeyState('W') & 0x8000)
 	{
@@ -243,14 +180,36 @@ void Scene::OnKeyboardEvent(FLOAT deltaTime) const
 	{
 		m_player->AddVelocity(Vector3::Mul(m_player->GetRight(), deltaTime * 10.0f));
 	}
-	//if ((GetAsyncKeyState(VK_SPACE) & 0x8000) && m_player->GetVelocity().y == 0.0f)
-	//{
-	//	m_player->AddVelocity(Vector3::Mul(m_player->GetUp(), deltaTime * 10.0f));
-	//}
-	//if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-	//{
-	//	m_player->AddVelocity(Vector3::Mul(m_player->GetUp(), deltaTime * -10.0f));
-	//}
+	if (GetAsyncKeyState(VK_SPACE) & 0x8000)
+	{
+		m_player->AddVelocity(Vector3::Mul(m_player->GetUp(), deltaTime * 10.0f));
+	}
+	if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+	{
+		m_player->AddVelocity(Vector3::Mul(m_player->GetUp(), deltaTime * -10.0f));
+	}
+}
+
+void Scene::OnKeyboardEvent(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	// 지형 와이어프레임 ON, OFF
+	// 
+	static bool drawAsWireframe{ false };
+	if (wParam == 'q' || wParam == 'Q')
+	{
+		drawAsWireframe = !drawAsWireframe;
+		for (auto& terrain : m_terrains)
+			if (drawAsWireframe)
+				terrain->SetShader(m_resourceManager->GetShader("TERRAINTESSWIRE"));
+			else
+				terrain->SetShader(m_resourceManager->GetShader("TERRAINTESS"));
+	}
+
+	// 종료
+	else if (wParam == VK_ESCAPE)
+	{
+		exit(0);
+	}
 }
 
 void Scene::OnUpdate(FLOAT deltaTime)
@@ -261,88 +220,47 @@ void Scene::OnUpdate(FLOAT deltaTime)
 	if (m_skybox) m_skybox->Update();
 	for (auto& object : m_gameObjects)
 		object->Update(deltaTime);
-	for (auto& instance : m_instances)
-		instance->Update(deltaTime);
+	for (auto& particle : m_particles)
+		particle->Update(deltaTime);
 }
 
 void Scene::Update(FLOAT deltaTime)
 {
-	BulletCollisionCheck();		// 총알 충돌 판정
-	RemoveDeletedGameObjects(); // 삭제해야할 오브젝트 삭제
-	UpdateGameObjectsTerrain(); // 게임오브젝트들 지형 포인터 설정
+	RemoveDeletedObjects();
+	UpdateObjectsTerrain();
 }
 
-void Scene::BulletCollisionCheck()
-{
-	// 범위 기반 for문을 2개로 하니까 안됨... 인덱스로 순회해야함
-	for (int i = 0; i < m_gameObjects.size(); ++i)
-	{
-		// 이미 삭제된 오브젝트와 건물이 아닌 객체는 패스
-		if (m_gameObjects[i]->GetIsDeleted()) continue;
-		if (m_gameObjects[i]->GetType() != GameObjectType::BUILDING) continue;
-
-		BoundingOrientedBox boundingBox{ m_gameObjects[i]->GetBoundingBox() };
-		boundingBox.Transform(boundingBox, XMLoadFloat4x4(&m_gameObjects[i]->GetWorldMatrix()));
-		for (int j = 0; j < m_gameObjects.size(); ++j)
-		{
-			// 이미 삭제된 오브젝트와 총알이 아닌 객체는 패스
-			if (m_gameObjects[j]->GetIsDeleted()) continue;
-			if (m_gameObjects[j]->GetType() != GameObjectType::BULLET) continue;
-
-			if (boundingBox.Contains(XMLoadFloat3(&m_gameObjects[j]->GetPosition())))
-			{
-				m_gameObjects[i]->SetDelete(true);
-				m_gameObjects[j]->SetDelete(true);
-				break;
-			}
-		}
-	}
-}
-
-void Scene::RemoveDeletedGameObjects()
+void Scene::RemoveDeletedObjects()
 {
 	vector<unique_ptr<GameObject>> willBeAdded;
 
-	// m_isDeleted가 true인 객체들을 삭제한다.
-	auto pred = [this, &willBeAdded](unique_ptr<GameObject>& object) {
-
-		// 삭제한 오브젝트가 총알이라면 그 자리에 폭발이펙트 생성
-		if (object->GetIsDeleted() && object->GetType() == GameObjectType::BULLET)
+	auto pred = [&](unique_ptr<GameObject>& object) {
+		if (object->isDeleted() && object->GetType() == GameObjectType::BULLET)
 		{
-			unique_ptr<BillboardObject> explosion{ make_unique<BillboardObject>(m_camera) };
-			explosion->SetMesh(m_resourceManager->GetMesh("EXPLOSION_MESH"));
-			explosion->SetShader(m_resourceManager->GetShader("TEXTURE_SHADER"));
-			explosion->SetTexture(m_resourceManager->GetTexture("EXPLOSION_TEXTURE"));
+			auto textureInfo{ make_unique<TextureInfo>() };
+			textureInfo->frameInterver *= 1.5f;
+			textureInfo->isFrameRepeat = false;
 
-			// 텍스쳐 정보
-			unique_ptr<TextureInfo> textureInfo{ make_unique<TextureInfo>() };
-			textureInfo->frameInterver *= 1.5f;				// 1 프레임당 보여줄 시간 (기본 : 1 / 60초)
-			textureInfo->isFrameRepeat = false;				// 마지막 프레임까지 진행되면 객체를 삭제함
+			auto explosion{ make_unique<BillboardObject>(m_camera) };
+			explosion->SetPosition(object->GetPosition());
+			explosion->SetMesh(m_resourceManager->GetMesh("EXPLOSION"));
+			explosion->SetShader(m_resourceManager->GetShader("BLENDING"));
+			explosion->SetTexture(m_resourceManager->GetTexture("EXPLOSION"));
 			explosion->SetTextureInfo(textureInfo);
-			explosion->SetCheckTerrain(false);				// 폭발은 지형 위에 있을 필요 없음
-			explosion->SetPosition(object->GetPosition());	// 지형과 닿은 위치에 폭발함
-			willBeAdded.push_back(move(explosion));			// 지금 당장 추가하면 이터레이터가 꼬이기 때문에 나중에 추가해줄 벡터에 추가
+			willBeAdded.push_back(move(explosion));
 		}
-
-		return object->GetIsDeleted();
+		return object->isDeleted();
 	};
 	m_gameObjects.erase(remove_if(m_gameObjects.begin(), m_gameObjects.end(), pred), m_gameObjects.end());
-	
-	for (auto& instance : m_instances)
-	{
-		vector<unique_ptr<GameObject>>& gameObjects{ instance->GetGameObjects() };
-		gameObjects.erase(remove_if(gameObjects.begin(), gameObjects.end(), pred), gameObjects.end());
-	}
+	m_particles.erase(remove_if(m_particles.begin(), m_particles.end(), pred), m_particles.end());
 
+	// 총알 삭제될 때 생기는 이펙트는 파티클 객체에 추가한다.
 	for (auto& object : willBeAdded)
-		m_gameObjects.push_back(move(object));
+		m_particles.push_back(move(object));
 }
 
-void Scene::UpdateGameObjectsTerrain()
+void Scene::UpdateObjectsTerrain()
 {
-	// 지형이 여러개일 수 있다는 것을 고려했기 때문에
-	// 게임오브젝트들이 어느 지형 위에 있는지 설정해준다.
-
 	XMFLOAT3 pos{};
 	auto pred = [&pos](unique_ptr<HeightMapTerrain>& terrain) {
 		XMFLOAT3 tPos{ terrain->GetPosition() };
@@ -362,39 +280,21 @@ void Scene::UpdateGameObjectsTerrain()
 		return false;
 	};
 
-	// 플레이어, 카메라, 오브젝트가 어느 지형 위에 있는지 설정
 	if (m_player)
 	{
 		pos = m_player->GetPosition();
 		auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
 		m_player->SetTerrain(terrain != m_terrains.end() ? terrain->get() : nullptr);
 	}
-	if (m_camera)
+	for (auto& object : m_particles)
 	{
-		pos = m_camera->GetEye();
-		auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
-		m_camera->SetTerrain(terrain != m_terrains.end() ? terrain->get() : nullptr);
-	}
-	for (auto& object : m_gameObjects)
-	{
-		if (!object->GetCheckTerrain()) continue;
 		pos = object->GetPosition();
 		auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
 		object->SetTerrain(terrain != m_terrains.end() ? terrain->get() : nullptr);
 	}
-	for (auto& instance : m_instances)
-		for (auto& object : instance->GetGameObjects())
-		{
-			// 나무와 풀은 한 번 지형이 정해졌으면 움직이지않으므로 검사할 필요 없음
-			if ((object->GetType() == GameObjectType::BILLBOARD) && object->GetTerrain()) continue;
-
-			pos = object->GetPosition();
-			auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
-			object->SetTerrain(terrain != m_terrains.end() ? terrain->get() : nullptr);
-		}
 }
 
-void Scene::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
+void Scene::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle) const
 {
 	// 카메라 셰이더 변수(뷰, 투영 변환 행렬) 최신화
 	if (m_camera) m_camera->UpdateShaderVariable(commandList);
@@ -403,6 +303,34 @@ void Scene::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
 	// 스카이박스는 깊이버퍼에 영향을 미치지 않는다(SkyboxShader).
 	if (m_skybox) m_skybox->Render(commandList);
 
+	if (m_mirror && m_player)
+	{
+		// 스텐실 버퍼 초기화
+		commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
+
+		// 스텐실 참조값 설정
+		commandList->OMSetStencilRef(1);
+
+		// 거울 위치를 스텐실 버퍼에 표시
+		m_mirror->Render(commandList, m_resourceManager->GetShader("STENCIL"));
+
+		// 거울에 비친 상 렌더링
+		XMVECTOR mirrorPlane{ XMVectorSet(0.0f, 0.0f, -1.0f, m_mirror->GetPosition().z) };
+		XMFLOAT4X4 reflectMatrix;
+		XMStoreFloat4x4(&reflectMatrix, XMMatrixReflect(mirrorPlane));
+
+		XMFLOAT4X4 originWorldMatrix{ m_player->GetWorldMatrix() };
+		m_player->SetWorldMatrix(Matrix::Mul(m_player->m_worldMatrix, reflectMatrix));
+		m_player->Render(commandList, m_resourceManager->GetShader("MIRROR"));
+		m_player->SetWorldMatrix(originWorldMatrix);
+
+		// 스텐실 참조값 초기화
+		commandList->OMSetStencilRef(0);
+
+		// 진짜 거울 렌더링
+		m_mirror->Render(commandList);
+	}
+
 	// 플레이어 렌더링
 	if (m_player) m_player->Render(commandList);
 
@@ -410,13 +338,13 @@ void Scene::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
 	for (const auto& gameObject : m_gameObjects)
 		gameObject->Render(commandList);
 
-	// 인스턴스 렌더링
-	for (const auto& instance : m_instances)
-		instance->Render(commandList);
-
 	// 지형 렌더링
 	for (const auto& terrain : m_terrains)
 		terrain->Render(commandList);
+
+	// 파티클 렌더링
+	for (const auto& particle : m_particles)
+		particle->Render(commandList);
 }
 
 void Scene::ReleaseUploadBuffer()
@@ -427,17 +355,12 @@ void Scene::ReleaseUploadBuffer()
 void Scene::CreateBullet()
 {
 	unique_ptr<Bullet> bullet{ make_unique<Bullet>(m_player->GetPosition(), m_player->GetLook(), m_player->GetNormal(), 100.0f) };
-	bullet->SetMesh(m_resourceManager->GetMesh("BULLET_MESH"));
-	bullet->SetShader(m_resourceManager->GetShader("TEXTURE_SHADER"));
-	bullet->SetTexture(m_resourceManager->GetTexture("ROCK_TEXTURE"));
-
-	// 탱크 매쉬의 피봇이 땅에 있기 때문에 조금 위에서 생성
-	// 그리고 탱크 포신 길이도 생각해서 조정해줘야함
-	XMFLOAT3 position{ m_player->GetPosition() };
-	position.y += 0.45f;
-	position = Vector3::Add(position, Vector3::Mul(m_player->GetLook(), 2.5f));
-	bullet->SetPosition(position);
-	m_gameObjects.push_back(move(bullet));
+	bullet->SetPosition(m_player->GetPosition());
+	bullet->SetMesh(m_resourceManager->GetMesh("BULLET"));
+	bullet->SetShader(m_resourceManager->GetShader("BLENDING"));
+	bullet->SetTexture(m_resourceManager->GetTexture("ROCK"));
+	//m_gameObjects.push_back(move(bullet));
+	m_particles.push_back(move(bullet));
 }
 
 void Scene::SetSkybox(unique_ptr<Skybox>& skybox)

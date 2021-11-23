@@ -29,26 +29,25 @@ void Instance::Update(FLOAT deltaTime)
 
 void Instance::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList) const
 {
-	if (m_mesh)
+	if (!m_mesh) return;
+
+	if (m_shader) commandList->SetPipelineState(m_shader->GetPipelineState().Get());
+	if (m_texture) m_texture->UpdateShaderVariable(commandList);
+	for (int i = 0; i < m_gameObjects.size(); ++i)
 	{
-		if (m_shader) commandList->SetPipelineState(m_shader->GetPipelineState().Get());
-		if (m_texture) m_texture->UpdateShaderVariable(commandList);
-		for (int i = 0; i < m_gameObjects.size(); ++i)
+		if (m_gameObjects[i]->GetType() == GameObjectType::BILLBOARD)
 		{
-			if (m_gameObjects[i]->GetType() == GameObjectType::BILLBOARD)
-			{
-				BillboardObject* object{ reinterpret_cast<BillboardObject*>(m_gameObjects[i].get()) };
-				XMFLOAT4X4 objectWorldMatrix{ object->GetWorldMatrix() };
-				XMFLOAT3 offset{ object->GetOffset() };
-				objectWorldMatrix._41 += offset.x;
-				objectWorldMatrix._42 += offset.y;
-				objectWorldMatrix._43 += offset.z;
-				m_instanceBufferPointer[i].worldMatrix = Matrix::Transpose(objectWorldMatrix);
-			}
-			else m_instanceBufferPointer[i].worldMatrix = Matrix::Transpose(m_gameObjects[i]->GetWorldMatrix());
+			BillboardObject* object{ reinterpret_cast<BillboardObject*>(m_gameObjects[i].get()) };
+			XMFLOAT4X4 objectWorldMatrix{ object->GetWorldMatrix() };
+			XMFLOAT3 offset{ object->GetOffset() };
+			objectWorldMatrix._41 += offset.x;
+			objectWorldMatrix._42 += offset.y;
+			objectWorldMatrix._43 += offset.z;
+			m_instanceBufferPointer[i].worldMatrix = Matrix::Transpose(objectWorldMatrix);
 		}
-		m_mesh->Render(commandList, m_instanceBufferView, m_count);
+		else m_instanceBufferPointer[i].worldMatrix = Matrix::Transpose(m_gameObjects[i]->GetWorldMatrix());
 	}
+	m_mesh->Render(commandList, m_instanceBufferView, m_count);
 }
 
 void Instance::AddGameObject(unique_ptr<GameObject> gameObject)

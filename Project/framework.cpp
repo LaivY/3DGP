@@ -1,4 +1,6 @@
 #include "framework.h"
+#include <fstream>
+#include <string>
 
 GameFramework::GameFramework(UINT width, UINT height) :
 	m_width{ width },
@@ -21,8 +23,8 @@ void GameFramework::GameLoop()
 	m_timer.Tick();
 	if (m_isActive)
 	{
-		OnMouseEvent();		// 실시간 마우스 이벤트
-		OnKeyboardEvent();	// 실시간 키보드 이벤트
+		OnMouseEvent();
+		OnKeyboardEvent();
 	}
 	OnUpdate(m_timer.GetDeltaTime());
 	OnRender();
@@ -46,12 +48,9 @@ void GameFramework::OnUpdate(FLOAT deltaTime)
 void GameFramework::OnRender()
 {
 	PopulateCommandList();
-
 	ID3D12CommandList* ppCommandList[] = { m_commandList.Get() };
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandList), ppCommandList);
-
 	DX::ThrowIfFailed(m_swapChain->Present(1, 0));
-
 	WaitForPreviousFrame();
 }
 
@@ -63,21 +62,24 @@ void GameFramework::OnDestroy()
 
 void GameFramework::OnMouseEvent()
 {
-	// 상시 마우스 이벤트
 	if (m_scene) m_scene->OnMouseEvent(m_hWnd, m_width, m_height, m_timer.GetDeltaTime());
 }
 
 void GameFramework::OnMouseEvent(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	// 윈도우 마우스 이벤트
 	if (m_scene) m_scene->OnMouseEvent(hWnd, message, wParam, lParam);
 }
 
-void GameFramework::OnKeyboardEvent() const
+void GameFramework::OnKeyboardEvent()
 {
-	// 상시 키보드 이벤트
 	if (m_scene) m_scene->OnKeyboardEvent(m_timer.GetDeltaTime());
 }
+
+void GameFramework::OnKeyboardEvent(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	if (m_scene) m_scene->OnKeyboardEvent(hWnd, message, wParam, lParam);
+}
+
 
 void GameFramework::Update(FLOAT deltaTime)
 {
@@ -214,19 +216,15 @@ void GameFramework::CreateDepthStencilView()
 
 void GameFramework::CreateRootSignature()
 {
-	CD3DX12_DESCRIPTOR_RANGE ranges[3];
-	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // Texture2D g_texture			 : t0
-	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // Texture2D g_detailTexture	 : t1
-	ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 2, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // Texture2D g_roadTexture		 : t2
-	//ranges[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // Texture2D g_roadDetailTexture : t3
+	CD3DX12_DESCRIPTOR_RANGE ranges[2];
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // Texture2D g_texture		 : t0
+	ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // Texture2D g_detailTexture : t1
 
-	CD3DX12_ROOT_PARAMETER rootParameter[5];
+	CD3DX12_ROOT_PARAMETER rootParameter[4];
 	rootParameter[0].InitAsConstants(16, 0, 0); // cbGameObject	: 월드 변환 행렬(16)
-	rootParameter[1].InitAsConstants(32, 1, 0); // cbCamera		: 뷰 변환 행렬(16) + 투영 변환 행렬(16)
+	rootParameter[1].InitAsConstants(35, 1, 0); // cbCamera		: 뷰 변환 행렬(16) + 투영 변환 행렬(16) + 카메라 위치(3)
 	rootParameter[2].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
 	rootParameter[3].InitAsDescriptorTable(1, &ranges[1], D3D12_SHADER_VISIBILITY_PIXEL);
-	rootParameter[4].InitAsDescriptorTable(1, &ranges[2], D3D12_SHADER_VISIBILITY_PIXEL);
-	//rootParameter[5].InitAsDescriptorTable(1, &ranges[3], D3D12_SHADER_VISIBILITY_PIXEL);
 
 	CD3DX12_STATIC_SAMPLER_DESC samplerDesc{};
 	samplerDesc.Init(
@@ -353,7 +351,7 @@ void GameFramework::PopulateCommandList() const
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 
 	// 렌더링
-	if (m_scene) m_scene->Render(m_commandList);
+	if (m_scene) m_scene->Render(m_commandList, dsvHandle);
 
 	// Indicate back buffer will now be used to present
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
