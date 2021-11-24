@@ -142,14 +142,18 @@ HeightMapGridTessMesh::HeightMapGridTessMesh(const ComPtr<ID3D12Device>& device,
 
 HeightMapTerrain::HeightMapTerrain(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList,
 	const wstring& fileName, const shared_ptr<Shader>& shader, const shared_ptr<Texture>& texture, INT width, INT length, INT blockWidth, INT blockLength, XMFLOAT3 scale)
-	: m_width{ width }, m_length{ length }, m_blockWidth{ blockWidth }, m_blockLength{ blockLength }, m_scale{ scale }
+	: m_blockWidth{ blockWidth }, m_blockLength{ blockLength }, m_scale{ scale }
 {
 	// 높이맵이미지 로딩
-	m_heightMapImage = make_unique<HeightMapImage>(fileName, m_width, m_length, m_scale);
+	m_heightMapImage = make_unique<HeightMapImage>(fileName, width, length, m_scale);
 
 	// 가로, 세로 블록의 개수
-	int widthBlockCount{ m_width / m_blockWidth };
-	int lengthBlockCount{ m_length / m_blockLength };
+	int widthBlockCount{ width / m_blockWidth };
+	int lengthBlockCount{ length / m_blockLength };
+
+	// 지형의 실제 너비와 길이는 블록의 길이에 따라 결정된다.
+	m_width = m_blockWidth * widthBlockCount;
+	m_length = m_blockLength * lengthBlockCount;
 
 	// 블록 생성
 	for (int z = 0; z < lengthBlockCount; ++z)

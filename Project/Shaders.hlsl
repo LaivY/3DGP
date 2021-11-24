@@ -38,23 +38,6 @@ float4 PSTextureMain(VSTextureOutput input) : SV_TARGET
 
 // --------------------------------------
 
-VSInstanceOutput VSInstanceMain(VSInstanceInput input)
-{
-    VSInstanceOutput output;
-    output.position = mul(input.position, input.worldMatrix);
-    output.position = mul(output.position, viewMatrix);
-    output.position = mul(output.position, projMatrix);
-    output.uv = input.uv;
-    return output;
-}
-
-float4 PSInstanceMain(VSInstanceOutput input) : SV_TARGET
-{
-    return g_texture.Sample(g_sampler, input.uv);
-}
-
-// --------------------------------------
-
 VSTerrainOutput VSTerrainMain(VSTerrainInput input)
 {
     VSTerrainOutput output;

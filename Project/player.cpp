@@ -12,30 +12,22 @@ void Player::Update(FLOAT deltaTime)
 
 	m_look = m_front;
 
+	// 실내, 지형 밖으로 못나가게 설정
+	SetPlayerInArea();
+
 	// 플레이어가 어떤 지형 위에 있다면
 	if (m_terrain)
 	{
-		// 플레이어가 지형 위에 있도록 설정
-		SetPlayerOnTerrain();
-
-		// 플레이어가 서있는 곳의 노말 설정
-		XMFLOAT3 pos{ GetPosition() };
-		m_normal = m_terrain->GetNormal(pos.x, pos.z);
-
-		// 플레이어가 바라보는 방향 설정
-		if (float theta = acosf(Vector3::Dot(XMFLOAT3{ 0.0f, 1.0f, 0.0f }, m_normal)))
+		// 실내에 있는게 아니라면
+		if (GetPosition().y < 300.0f)
 		{
-			XMFLOAT3 right{ Vector3::Normalize(Vector3::Cross(XMFLOAT3{ 0.0f, 1.0f, 0.0f }, m_normal)) };
-			XMFLOAT4X4 rotate; XMStoreFloat4x4(&rotate, XMMatrixRotationNormal(XMLoadFloat3(&right), theta));
-			m_look = Vector3::TransformNormal(GetFront(), rotate);
-			right = Vector3::Normalize(Vector3::Cross(m_normal, m_look));
+			// 플레이어가 지형 위를 움직이도록 설정
+			SetPlayerOnTerrain();
 
-			m_worldMatrix._11 = right.x;	m_worldMatrix._12 = right.y;	m_worldMatrix._13 = right.z;
-			m_worldMatrix._21 = m_normal.x;	m_worldMatrix._22 = m_normal.y;	m_worldMatrix._23 = m_normal.z;
-			m_worldMatrix._31 = m_look.x;	m_worldMatrix._32 = m_look.y;	m_worldMatrix._33 = m_look.z;
+			// 플레이어의 노말과 룩 벡터 설정
+			SetPlayerNormalAndLook();
 		}
 	}
-
 	m_velocity = Vector3::Mul(m_velocity, 1 / m_friction * deltaTime);
 }
 
@@ -56,6 +48,29 @@ void Player::Rotate(FLOAT roll, FLOAT pitch, FLOAT yaw)
 
 	// 플레이어는 y축으로만 회전할 수 있다.
 	GameObject::Rotate(0.0f, 0.0f, yaw);
+}
+
+void Player::SetPlayerInArea()
+{
+	XMFLOAT3 pos{ GetPosition() };
+
+	// 실내 밖으로 못나가게
+	if (GetPosition().y > 300.0f)
+	{
+		pos.x = clamp(pos.x, -14.0f, 14.0f);
+		pos.z = clamp(pos.z, -14.0f, 14.0f);
+		SetPosition(pos);
+	}
+
+	// 지형 밖으로 못나가게
+	else if (m_terrain)
+	{
+		XMFLOAT3 tPos{ m_terrain->GetPosition() };
+		XMFLOAT3 scale{ m_terrain->GetScale() };
+		pos.x = clamp(pos.x, tPos.x, tPos.x + m_terrain->GetWidth() * scale.x);
+		pos.z = clamp(pos.z, tPos.z, tPos.z + m_terrain->GetLength() * scale.z);
+		SetPosition(pos);
+	}
 }
 
 void Player::SetPlayerOnTerrain()
@@ -122,6 +137,27 @@ void Player::SetPlayerOnTerrain()
 	XMFLOAT2 uv{ (pos.x - LB.x) / (blockWidth * scale.x), 1.0f - ((pos.z - LB.z) / (blockLength * scale.z)) };
 	XMFLOAT3 height{ CubicBezierSum(vertices, uv) };
 	SetPosition(XMFLOAT3{ pos.x, height.y, pos.z });
+}
+
+void Player::SetPlayerNormalAndLook()
+{
+	XMFLOAT3 pos{ GetPosition() };
+
+	// 노말 설정
+	m_normal = m_terrain->GetNormal(pos.x, pos.z);
+
+	// 룩 설정
+	if (float theta = acosf(Vector3::Dot(XMFLOAT3{ 0.0f, 1.0f, 0.0f }, m_normal)))
+	{
+		XMFLOAT3 right{ Vector3::Normalize(Vector3::Cross(XMFLOAT3{ 0.0f, 1.0f, 0.0f }, m_normal)) };
+		XMFLOAT4X4 rotate; XMStoreFloat4x4(&rotate, XMMatrixRotationNormal(XMLoadFloat3(&right), theta));
+		m_look = Vector3::TransformNormal(GetFront(), rotate);
+		right = Vector3::Normalize(Vector3::Cross(m_normal, m_look));
+
+		m_worldMatrix._11 = right.x;	m_worldMatrix._12 = right.y;	m_worldMatrix._13 = right.z;
+		m_worldMatrix._21 = m_normal.x;	m_worldMatrix._22 = m_normal.y;	m_worldMatrix._23 = m_normal.z;
+		m_worldMatrix._31 = m_look.x;	m_worldMatrix._32 = m_look.y;	m_worldMatrix._33 = m_look.z;
+	}
 }
 
 void Player::AddVelocity(const XMFLOAT3& increase)

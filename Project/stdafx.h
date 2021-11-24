@@ -131,6 +131,13 @@ namespace Matrix
         XMStoreFloat4x4(&result, m);
         return result;
     }
+
+    inline XMFLOAT4X4 Identity()
+    {
+        XMFLOAT4X4 result;
+        XMStoreFloat4x4(&result, XMMatrixIdentity());
+        return result;
+    }
 }
 
 // --------------------------------------

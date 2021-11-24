@@ -38,12 +38,13 @@ public:
 	XMFLOAT3 GetRight() const { return m_right; }
 	XMFLOAT3 GetUp() const { return m_up; }
 	XMFLOAT3 GetFront() const { return m_front; }
+	XMFLOAT3 GetRollPitchYaw() const { return XMFLOAT3{ m_roll, m_pitch, m_yaw }; }
+
 	HeightMapTerrain* GetTerrain() const { return m_terrain; }
 	XMFLOAT3 GetNormal() const { return m_normal; }
 	XMFLOAT3 GetLook() const { return m_look; }
 
 protected:
-public:
 	GameObjectType			m_type;				// 게임오브젝트 종류 특정짓기 위한 타입
 	bool					m_isDeleted;		// true일 경우 다음 프레임에 삭제됨
 

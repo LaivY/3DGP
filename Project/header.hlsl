@@ -36,20 +36,6 @@ struct VSTextureOutput
     float2 uv       : TEXCOORD;
 };
 
-struct VSInstanceInput
-{
-    float4 position     : POSITION;
-    float2 uv           : TEXCOORD;
-    matrix worldMatrix  : INSTANCE;
-};
-
-struct VSInstanceOutput
-{
-    float4 position : SV_POSITION;
-    float2 uv       : TEXCOORD;
-};
-
-
 struct VSTerrainInput
 {
     float4 position : POSITION;

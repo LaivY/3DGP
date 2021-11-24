@@ -61,15 +61,6 @@ public:
 	virtual void CreatePipelineState(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature);
 };
 
-class InstanceShader : public Shader
-{
-public:
-	InstanceShader(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature) { CreatePipelineState(device, rootSignature); }
-	~InstanceShader() = default;
-
-	virtual void CreatePipelineState(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature);
-};
-
 class BlendingShader : public Shader
 {
 public:
@@ -102,6 +93,15 @@ class MirrorShader : public Shader
 public:
 	MirrorShader(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature) { CreatePipelineState(device, rootSignature); }
 	~MirrorShader() = default;
+
+	virtual void CreatePipelineState(const ComPtr<ID3D12Device>&device, const ComPtr<ID3D12RootSignature>&rootSignature);
+};
+
+class MirrorTextureShader : public Shader
+{
+public:
+	MirrorTextureShader(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature) { CreatePipelineState(device, rootSignature); }
+	~MirrorTextureShader() = default;
 
 	virtual void CreatePipelineState(const ComPtr<ID3D12Device>&device, const ComPtr<ID3D12RootSignature>&rootSignature);
 };

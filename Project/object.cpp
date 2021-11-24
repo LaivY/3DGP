@@ -113,7 +113,7 @@ XMFLOAT3 GameObject::GetPosition() const
 
 BillboardObject::BillboardObject(const shared_ptr<Camera>& camera, const XMFLOAT3& offset) : GameObject{}, m_camera{ camera }, m_offset{ offset }
 {
-	m_type == GameObjectType::BILLBOARD;
+	m_type = GameObjectType::BILLBOARD;
 }
 
 void BillboardObject::Update(FLOAT deltaTime)

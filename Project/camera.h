@@ -23,6 +23,7 @@ public:
 	void SetAt(const XMFLOAT3& at) { m_look = at;	UpdateLocalAxis(); }
 	void SetUp(const XMFLOAT3& up) { m_up = up;		UpdateLocalAxis(); }
 	void SetPlayer(const shared_ptr<Player>& player);
+	void SetTerrain(HeightMapTerrain* terrain) { m_terrain = terrain; }
 
 	XMFLOAT4X4 GetViewMatrix() const { return m_viewMatrix; }
 	XMFLOAT4X4 GetProjMatrix() const { return m_projMatrix; }
@@ -48,6 +49,7 @@ protected:
 	FLOAT				m_yaw;			// z축 회전각
 
 	shared_ptr<Player>	m_player;		// 플레이어
+	HeightMapTerrain*	m_terrain;		// 카메라가 위치해있는 지형
 };
 
 class ThirdPersonCamera : public Camera
@@ -60,10 +62,14 @@ public:
 	virtual void Rotate(FLOAT roll, FLOAT pitch, FLOAT yaw);
 
 	XMFLOAT3 GetOffset() const { return m_offset; }
+	FLOAT GetDistance() const { return m_distance; }
+
 	void SetOffset(const XMFLOAT3& offset) { m_offset = offset; }
+	void SetDistance(FLOAT distance) { m_distance = clamp(distance, 3.0f, 20.0f); }
 	void SetDelay(FLOAT delay) { m_delay = delay; }
 
 private:
 	XMFLOAT3	m_offset;	// 플레이어로부터 떨어져있는 위치
+	FLOAT		m_distance;	// 오프셋 방향으로 떨어진 거리
 	FLOAT		m_delay;	// 움직임 딜레이 (0.0 ~ 1.0)
 };

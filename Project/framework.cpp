@@ -344,7 +344,7 @@ void GameFramework::PopulateCommandList() const
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, TRUE, &dsvHandle);
 
 	// ·»´õÅ¸°Ù, ±íÀÌ½ºÅÙ½Ç ¹öÆÛ Áö¿ì±â
-	const FLOAT clearColor[]{ 0.0f, 0.2f, 0.4f, 1.0f };
+	const FLOAT clearColor[]{ 1.0f, 1.0f, 1.0f, 1.0f };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, NULL);
 	m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 

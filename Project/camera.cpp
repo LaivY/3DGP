@@ -11,6 +11,15 @@ Camera::Camera() :
 
 void Camera::Update(FLOAT deltaTime)
 {
+	// 카메라가 지형 밑으로 내려가지 않도록함
+	if (m_terrain)
+	{
+		XMFLOAT3 pos{ GetEye() };
+		FLOAT height{ m_terrain->GetHeight(pos.x, pos.z) };
+		if (pos.y < height + 0.5f)
+			SetEye(XMFLOAT3{ pos.x, height + 0.5f, pos.z });
+	}
+
 	// 카메라 뷰 변환 행렬 최신화
 	XMStoreFloat4x4(&m_viewMatrix, XMMatrixLookAtLH(XMLoadFloat3(&m_eye), XMLoadFloat3(&Vector3::Add(m_eye, m_look)), XMLoadFloat3(&m_up)));
 }
@@ -20,12 +29,8 @@ void Camera::UpdateShaderVariable(const ComPtr<ID3D12GraphicsCommandList>& comma
 	// DIRECTX는 행우선(row-major), HLSL는 열우선(column-major)
 	// 행렬이 셰이더로 넘어갈 때 자동으로 전치 행렬로 변환된다.
 	// 그래서 셰이더에 전치 행렬을 넘겨주면 DIRECTX의 곱셈 순서와 동일하게 계산할 수 있다.
-	XMFLOAT4X4 transViewMatrix, transProjMatrix;
-	XMStoreFloat4x4(&transViewMatrix, XMMatrixTranspose(XMLoadFloat4x4(&m_viewMatrix)));
-	XMStoreFloat4x4(&transProjMatrix, XMMatrixTranspose(XMLoadFloat4x4(&m_projMatrix)));
-
-	commandList->SetGraphicsRoot32BitConstants(1, 16, &transViewMatrix, 0);
-	commandList->SetGraphicsRoot32BitConstants(1, 16, &transProjMatrix, 16);
+	commandList->SetGraphicsRoot32BitConstants(1, 16, &Matrix::Transpose(m_viewMatrix), 0);
+	commandList->SetGraphicsRoot32BitConstants(1, 16, &Matrix::Transpose(m_projMatrix), 16);
 	commandList->SetGraphicsRoot32BitConstants(1, 3, &GetEye(), 32);
 }
 
@@ -86,14 +91,14 @@ void Camera::SetPlayer(const shared_ptr<Player>& player)
 
 // --------------------------------------
 
-ThirdPersonCamera::ThirdPersonCamera() : Camera{}, m_offset{ 0.0f, 1.0f, -5.0f }, m_delay{ 0.01f }
+ThirdPersonCamera::ThirdPersonCamera() : Camera{}, m_distance{ 5.0f }, m_delay{ 0.01f }
 {
-
+	m_offset = Vector3::Normalize(XMFLOAT3{ 0.0f, 1.0f, -5.0f });
 }
 
 void ThirdPersonCamera::Update(FLOAT deltaTime)
 {
-	XMFLOAT3 destination{ Vector3::Add(m_player->GetPosition(), m_offset) };
+	XMFLOAT3 destination{ Vector3::Add(m_player->GetPosition(), Vector3::Mul(m_offset, m_distance)) };
 	XMFLOAT3 direction{ Vector3::Sub(destination, GetEye()) };
 	XMFLOAT3 shift{ Vector3::Mul(direction, fmax((1.0f - m_delay) * deltaTime * 10.0f, 0.01f)) };
 	SetEye(Vector3::Add(GetEye(), shift));

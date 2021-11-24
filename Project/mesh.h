@@ -66,6 +66,13 @@ public:
 	~CubeMesh() = default;
 };
 
+class ReverseCubeMesh : public Mesh
+{
+public:
+	ReverseCubeMesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, FLOAT width, FLOAT length, FLOAT height);
+	~ReverseCubeMesh() = default;
+};
+
 class TextureRectMesh : public Mesh
 {
 public:
