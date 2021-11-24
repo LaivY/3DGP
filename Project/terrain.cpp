@@ -8,7 +8,7 @@ HeightMapImage::HeightMapImage(const wstring& fileName, INT width, INT length, X
 	unique_ptr<BYTE[]> buffer{ new BYTE[m_width * m_length] };
 	HANDLE hFile{ CreateFile(fileName.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL) };
 	DWORD bytesRead;
-	ReadFile(hFile, buffer.get(), m_width* m_length, &bytesRead, NULL);
+	ReadFile(hFile, buffer.get(), m_width * m_length, &bytesRead, NULL);
 	CloseHandle(hFile);
 
 	// 높이맵 이미지는 좌상단이 (0, 0)이고 우리가 원하는 좌표계는 좌하단이 (0, 0)이므로 상하대칭 시켜서 저장한다.

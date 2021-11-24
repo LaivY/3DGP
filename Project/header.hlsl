@@ -15,14 +15,40 @@ cbuffer cbCamera : register(b1)
 struct VSInput
 {
     float4 position : POSITION;
-    float2 uv       : TEXCOORD;
+    float4 color    : COLOR;
 };
 
 struct VSOutput
 {
     float4 position : SV_POSITION;
+    float4 color    : COLOR;
+};
+
+struct VSTextureInput
+{
+    float4 position : POSITION;
     float2 uv       : TEXCOORD;
 };
+
+struct VSTextureOutput
+{
+    float4 position : SV_POSITION;
+    float2 uv       : TEXCOORD;
+};
+
+struct VSInstanceInput
+{
+    float4 position     : POSITION;
+    float2 uv           : TEXCOORD;
+    matrix worldMatrix  : INSTANCE;
+};
+
+struct VSInstanceOutput
+{
+    float4 position : SV_POSITION;
+    float2 uv       : TEXCOORD;
+};
+
 
 struct VSTerrainInput
 {

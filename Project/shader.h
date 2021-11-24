@@ -16,6 +16,15 @@ protected:
 	ComPtr<ID3D12PipelineState> m_pipelineState;
 };
 
+class TextureShader : public Shader
+{
+public:
+	TextureShader(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature) { CreatePipelineState(device, rootSignature); }
+	~TextureShader() = default;
+
+	virtual void CreatePipelineState(const ComPtr<ID3D12Device>&device, const ComPtr<ID3D12RootSignature>&rootSignature);
+};
+
 class TerrainShader : public Shader
 {
 public:
@@ -48,6 +57,15 @@ class SkyboxShader : public Shader
 public:
 	SkyboxShader(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature) { CreatePipelineState(device, rootSignature); }
 	~SkyboxShader() = default;
+
+	virtual void CreatePipelineState(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature);
+};
+
+class InstanceShader : public Shader
+{
+public:
+	InstanceShader(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature) { CreatePipelineState(device, rootSignature); }
+	~InstanceShader() = default;
 
 	virtual void CreatePipelineState(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12RootSignature>& rootSignature);
 };

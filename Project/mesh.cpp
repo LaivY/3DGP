@@ -8,6 +8,44 @@ Mesh::Mesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsComman
 	if (indexData) CreateIndexBuffer(device, commandList, indexData, indexDataCount);
 }
 
+Mesh::Mesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const string& fileName, D3D_PRIMITIVE_TOPOLOGY primitiveTopology)
+	: m_primitiveTopology{ primitiveTopology }
+{
+	vector<ColorVertex> vertices;
+	vector<UINT> indices;
+
+	ifstream file{ fileName };
+	string line;
+	while (getline(file, line))
+	{
+		stringstream ss{ line };
+		vector<string> data{ istream_iterator<string>(ss), {} };
+		if (data.empty()) continue;
+		if (data[0] == "v")
+		{
+			XMFLOAT3 position{
+				strtof(data[1].c_str(), NULL),
+				strtof(data[2].c_str(), NULL),
+				strtof(data[3].c_str(), NULL)
+			};
+			XMFLOAT4 color{
+				static_cast<float>(rand()) / static_cast<float>(RAND_MAX),
+				static_cast<float>(rand()) / static_cast<float>(RAND_MAX),
+				static_cast<float>(rand()) / static_cast<float>(RAND_MAX),
+				1.0f };
+			vertices.emplace_back(position, color);
+		}
+		else if (data[0] == "f")
+		{
+			indices.push_back(atoi(data[1].c_str()) - 1);
+			indices.push_back(atoi(data[2].c_str()) - 1);
+			indices.push_back(atoi(data[3].c_str()) - 1);
+		}
+	}
+	CreateVertexBuffer(device, commandList, vertices.data(), sizeof(ColorVertex), vertices.size());
+	CreateIndexBuffer(device, commandList, indices.data(), indices.size());
+}
+
 void Mesh::Render(const ComPtr<ID3D12GraphicsCommandList>& m_commandList) const
 {
 	m_commandList->IASetPrimitiveTopology(m_primitiveTopology);

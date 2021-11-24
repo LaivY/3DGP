@@ -1,6 +1,4 @@
 #include "framework.h"
-#include <fstream>
-#include <string>
 
 GameFramework::GameFramework(UINT width, UINT height) :
 	m_width{ width },

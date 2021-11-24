@@ -10,11 +10,45 @@ VSOutput VSMain(VSInput input)
     output.position = mul(input.position, worldMatrix);
     output.position = mul(output.position, viewMatrix);
     output.position = mul(output.position, projMatrix);
-    output.uv = input.uv;
+    output.color = input.color;
     return output;
 }
 
 float4 PSMain(VSOutput input) : SV_TARGET
+{
+    return input.color;
+}
+
+// --------------------------------------
+
+VSTextureOutput VSTextureMain(VSTextureInput input)
+{
+    VSTextureOutput output;
+    output.position = mul(input.position, worldMatrix);
+    output.position = mul(output.position, viewMatrix);
+    output.position = mul(output.position, projMatrix);
+    output.uv = input.uv;
+    return output;
+}
+
+float4 PSTextureMain(VSTextureOutput input) : SV_TARGET
+{
+    return g_texture.Sample(g_sampler, input.uv);
+}
+
+// --------------------------------------
+
+VSInstanceOutput VSInstanceMain(VSInstanceInput input)
+{
+    VSInstanceOutput output;
+    output.position = mul(input.position, input.worldMatrix);
+    output.position = mul(output.position, viewMatrix);
+    output.position = mul(output.position, projMatrix);
+    output.uv = input.uv;
+    return output;
+}
+
+float4 PSInstanceMain(VSInstanceOutput input) : SV_TARGET
 {
     return g_texture.Sample(g_sampler, input.uv);
 }

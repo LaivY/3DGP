@@ -40,14 +40,15 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	m_resourceManager = make_unique<ResourceManager>();
 
 	// 메쉬 생성
+	auto tankMesh{ make_shared<Mesh>(device, commandList, sPATH("Tank.obj")) };
 	auto cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
 	auto bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.1f, 0.1f) };
 	auto explosionMesh{ make_shared<TextureRectMesh>(device, commandList, 5.0f, 0.0f, 5.0f, XMFLOAT3{}) };
 	auto mirrorMesh{ make_shared<TextureRectMesh>(device, commandList, 10.0f, 0.0f, 10.0f, XMFLOAT3{ 0.0f, 0.0f, 0.1f }) };
 	
 	// 셰이더 생성
-	auto shader{ make_shared<Shader>(device, rootSignature) };
-	auto terrainShader{ make_shared<TerrainShader>(device, rootSignature) };
+	auto colorShader{ make_shared<Shader>(device, rootSignature) };
+	auto textureShader{ make_shared<TextureShader>(device, rootSignature) };
 	auto terrainTessShader{ make_shared<TerrainTessShader>(device, rootSignature) };
 	auto terrainTessWireShader{ make_shared<TerrainTessWireShader>(device, rootSignature) };
 	auto blendingShader{ make_shared<BlendingShader>(device, rootSignature) };
@@ -57,36 +58,37 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 
 	// 텍스쳐 생성
 	auto rockTexture{ make_shared<Texture>() };
-	rockTexture->LoadTextureFile(device, commandList, 2, PATH("Rock.dds"));
+	rockTexture->LoadTextureFile(device, commandList, 2, wPATH("Rock.dds"));
 	rockTexture->CreateSrvDescriptorHeap(device);
 	rockTexture->CreateShaderResourceView(device);
 
 	auto terrainTexture{ make_shared<Texture>() };
-	terrainTexture->LoadTextureFile(device, commandList, 2, PATH("BaseTerrain.dds"));
-	terrainTexture->LoadTextureFile(device, commandList, 3, PATH("DetailTerrain.dds"));
+	terrainTexture->LoadTextureFile(device, commandList, 2, wPATH("BaseTerrain.dds"));
+	terrainTexture->LoadTextureFile(device, commandList, 3, wPATH("DetailTerrain.dds"));
 	terrainTexture->CreateSrvDescriptorHeap(device);
 	terrainTexture->CreateShaderResourceView(device);
 
 	auto explosionTexture{ make_shared<Texture>() };
 	for (int i = 1; i <= 33; ++i)
-		explosionTexture->LoadTextureFile(device, commandList, 2, PATH("explosion (" + to_string(i) + ").dds"));
+		explosionTexture->LoadTextureFile(device, commandList, 2, wPATH("explosion (" + to_string(i) + ").dds"));
 	explosionTexture->CreateSrvDescriptorHeap(device);
 	explosionTexture->CreateShaderResourceView(device);
 
 	auto mirrorTexture{ make_shared<Texture>() };
-	mirrorTexture->LoadTextureFile(device, commandList, 2, PATH("Pink.dds"));
+	mirrorTexture->LoadTextureFile(device, commandList, 2, wPATH("Pink.dds"));
 	mirrorTexture->CreateSrvDescriptorHeap(device);
 	mirrorTexture->CreateShaderResourceView(device);
 
 	// 리소스매니저에 리소스 추가
+	m_resourceManager->AddMesh("TANK", tankMesh);
 	m_resourceManager->AddMesh("CUBE", cubeMesh);
 	m_resourceManager->AddMesh("BULLET", bulletMesh);
 	m_resourceManager->AddMesh("EXPLOSION", explosionMesh);
 	m_resourceManager->AddMesh("MIRROR", mirrorMesh);
-	m_resourceManager->AddShader("TEXTURE", shader);
-	m_resourceManager->AddShader("TERRAIN", terrainShader);
-	m_resourceManager->AddShader("TERRAINTESSWIRE", terrainTessWireShader);
+	m_resourceManager->AddShader("COLOR", colorShader);
+	m_resourceManager->AddShader("TEXTURE", textureShader);
 	m_resourceManager->AddShader("TERRAINTESS", terrainTessShader);
+	m_resourceManager->AddShader("TERRAINTESSWIRE", terrainTessWireShader);
 	m_resourceManager->AddShader("BLENDING", blendingShader);
 	m_resourceManager->AddShader("BLENDINGDEPTH", blendingDepthShader);
 	m_resourceManager->AddShader("STENCIL", stencilShader);
@@ -107,9 +109,8 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 
 	// 플레이어 생성
 	auto player{ make_shared<Player>() };
-	player->SetMesh(m_resourceManager->GetMesh("CUBE"));
-	player->SetShader(m_resourceManager->GetShader("TEXTURE"));
-	player->SetTexture(m_resourceManager->GetTexture("ROCK"));
+	player->SetMesh(m_resourceManager->GetMesh("TANK"));
+	player->SetShader(m_resourceManager->GetShader("COLOR"));
 	SetPlayer(player);
 
 	// 카메라, 플레이어 서로 설정
@@ -123,8 +124,8 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 
 	// 지형 생성
 	// 한 블록 당 25개의 정점으로 이루어져있으므로 블록 너비, 길이는 4의 배수여야한다.
-	XMFLOAT3 terrainScale{ 2.0f, 0.2f, 2.0f };
-	auto terrain{ make_unique<HeightMapTerrain>(device, commandList, PATH("HeightMap.raw"), m_resourceManager->GetShader("TERRAINTESS"), 
+	XMFLOAT3 terrainScale{ 1.0f, 0.2f, 1.0f };
+	auto terrain{ make_unique<HeightMapTerrain>(device, commandList, wPATH("HeightMap.raw"), m_resourceManager->GetShader("TERRAINTESS"), 
 												m_resourceManager->GetTexture("TERRAIN"), 257, 257, 12, 12, terrainScale) };
 	terrain->SetPosition({ 0.0f, 0.0f, 0.0f });
 	m_terrains.push_back(move(terrain));
@@ -220,7 +221,7 @@ void Scene::OnUpdate(FLOAT deltaTime)
 	if (m_skybox) m_skybox->Update();
 	for (auto& object : m_gameObjects)
 		object->Update(deltaTime);
-	for (auto& particle : m_particles)
+	for (auto& particle : m_translucences)
 		particle->Update(deltaTime);
 }
 
@@ -252,11 +253,11 @@ void Scene::RemoveDeletedObjects()
 		return object->isDeleted();
 	};
 	m_gameObjects.erase(remove_if(m_gameObjects.begin(), m_gameObjects.end(), pred), m_gameObjects.end());
-	m_particles.erase(remove_if(m_particles.begin(), m_particles.end(), pred), m_particles.end());
+	m_translucences.erase(remove_if(m_translucences.begin(), m_translucences.end(), pred), m_translucences.end());
 
 	// 총알 삭제될 때 생기는 이펙트는 파티클 객체에 추가한다.
 	for (auto& object : willBeAdded)
-		m_particles.push_back(move(object));
+		m_translucences.push_back(move(object));
 }
 
 void Scene::UpdateObjectsTerrain()
@@ -286,7 +287,7 @@ void Scene::UpdateObjectsTerrain()
 		auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
 		m_player->SetTerrain(terrain != m_terrains.end() ? terrain->get() : nullptr);
 	}
-	for (auto& object : m_particles)
+	for (auto& object : m_translucences)
 	{
 		pos = object->GetPosition();
 		auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
@@ -343,7 +344,7 @@ void Scene::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, D3D12_C
 		terrain->Render(commandList);
 
 	// 파티클 렌더링
-	for (const auto& particle : m_particles)
+	for (const auto& particle : m_translucences)
 		particle->Render(commandList);
 }
 
@@ -355,12 +356,11 @@ void Scene::ReleaseUploadBuffer()
 void Scene::CreateBullet()
 {
 	unique_ptr<Bullet> bullet{ make_unique<Bullet>(m_player->GetPosition(), m_player->GetLook(), m_player->GetNormal(), 100.0f) };
-	bullet->SetPosition(m_player->GetPosition());
+	bullet->SetPosition(Vector3::Add(m_player->GetPosition(), XMFLOAT3{ 0.0f, 0.5f, 0.0f }));
 	bullet->SetMesh(m_resourceManager->GetMesh("BULLET"));
 	bullet->SetShader(m_resourceManager->GetShader("BLENDING"));
 	bullet->SetTexture(m_resourceManager->GetTexture("ROCK"));
-	//m_gameObjects.push_back(move(bullet));
-	m_particles.push_back(move(bullet));
+	m_translucences.push_back(move(bullet));
 }
 
 void Scene::SetSkybox(unique_ptr<Skybox>& skybox)

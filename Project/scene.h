@@ -1,10 +1,11 @@
 #pragma once
 #include "stdafx.h"
+#include "camera.h"
+#include "instance.h"
 #include "object.h"
 #include "player.h"
-#include "camera.h"
-#include "terrain.h"
 #include "skybox.h"
+#include "terrain.h"
 
 class ResourceManager
 {
@@ -60,11 +61,14 @@ public:
 
 private:
 	unique_ptr<ResourceManager>				m_resourceManager;	// 모든 메쉬, 셰이더, 텍스쳐들
+
 	vector<unique_ptr<GameObject>>			m_gameObjects;		// 게임오브젝트
-	vector<unique_ptr<GameObject>>			m_particles;		// 파티클
+	vector<unique_ptr<GameObject>>			m_translucences;	// 반투명 객체
+	vector<unique_ptr<Instance>>			m_instances;		// 인스턴싱 객체
 	vector<unique_ptr<HeightMapTerrain>>	m_terrains;			// 지형
 	unique_ptr<GameObject>					m_mirror;			// 거울
 	unique_ptr<Skybox>						m_skybox;			// 스카이박스
+
 	shared_ptr<Player>						m_player;			// 플레이어
 	shared_ptr<Camera>						m_camera;			// 카메라
 };

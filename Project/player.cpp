@@ -69,9 +69,6 @@ void Player::SetPlayerOnTerrain()
 
 	XMFLOAT3 pos{ GetPosition() };
 	XMFLOAT3 LB{ m_terrain->GetBlockPosition(pos.x, pos.z) };
-
-	int width{ m_terrain->GetWidth() };
-	int length{ m_terrain->GetLength() };
 	int blockWidth{ m_terrain->GetBlockWidth() };
 	int blockLength{ m_terrain->GetBlockLength() };
 	XMFLOAT3 scale{ m_terrain->GetScale() };
@@ -115,18 +112,15 @@ void Player::SetPlayerOnTerrain()
 	for (int i = 0, z = 4; z >= 0; --z)
 		for (int x = 0; x < 5; ++x)
 		{
-			vertices[i].x = (LB.x + x * blockWidth / 4) * scale.x;
-			vertices[i].z = (LB.z + z * blockLength / 4) * scale.z;
+			vertices[i].x = LB.x + (x * blockWidth / 4 * scale.x);
+			vertices[i].z = LB.z + (z * blockLength / 4 * scale.z);
 			vertices[i].y = m_terrain->GetHeight(vertices[i].x, vertices[i].z);
 			++i;
 		}
 
 	// 플레이어의 위치 t
-	XMFLOAT2 uv{ (pos.x - LB.x) / blockWidth, 1.0f - (pos.z - LB.z) / blockLength };
+	XMFLOAT2 uv{ (pos.x - LB.x) / (blockWidth * scale.x), 1.0f - ((pos.z - LB.z) / (blockLength * scale.z)) };
 	XMFLOAT3 height{ CubicBezierSum(vertices, uv) };
-
-	// 플레이어를 노말 방향으로 0.5만큼 움직임
-	height = Vector3::Add(height, Vector3::Mul(m_normal, 0.5f));
 	SetPosition(XMFLOAT3{ pos.x, height.y, pos.z });
 }
 
