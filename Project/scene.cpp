@@ -45,6 +45,7 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	auto indoorMesh{ make_shared<ReverseCubeMesh>(device, commandList, 15.0f, 15.0f, 15.0f) };
 	auto bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.1f, 0.1f) };
 	auto explosionMesh{ make_shared<TextureRectMesh>(device, commandList, 5.0f, 0.0f, 5.0f, XMFLOAT3{}) };
+	auto smokeMesh{ make_shared<TextureRectMesh>(device, commandList, 5.0f, 0.0f, 5.0f, XMFLOAT3{}) };
 	auto mirrorMesh{ make_shared<TextureRectMesh>(device, commandList, 15.0f, 0.0f, 15.0f, XMFLOAT3{ 0.0f, 0.0f, 0.1f }) };
 	
 	// ¼ÎÀÌ´õ »ý¼º
@@ -76,6 +77,12 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	explosionTexture->CreateSrvDescriptorHeap(device);
 	explosionTexture->CreateShaderResourceView(device);
 
+	auto smokeTexture{ make_shared<Texture>() };
+	for (int i = 1; i <= 91; ++i)
+		smokeTexture->LoadTextureFile(device, commandList, 2, wPATH("smoke (" + to_string(i) + ").dds"));
+	smokeTexture->CreateSrvDescriptorHeap(device);
+	smokeTexture->CreateShaderResourceView(device);
+
 	auto indoorTexture{ make_shared<Texture>() };
 	indoorTexture->LoadTextureFile(device, commandList, 2, wPATH("Wall.dds"));
 	indoorTexture->CreateSrvDescriptorHeap(device);
@@ -92,6 +99,7 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	m_resourceManager->AddMesh("INDOOR", indoorMesh);
 	m_resourceManager->AddMesh("BULLET", bulletMesh);
 	m_resourceManager->AddMesh("EXPLOSION", explosionMesh);
+	m_resourceManager->AddMesh("SMOKE", smokeMesh);
 	m_resourceManager->AddMesh("MIRROR", mirrorMesh);
 
 	m_resourceManager->AddShader("COLOR", colorShader);
@@ -107,6 +115,7 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	m_resourceManager->AddTexture("ROCK", rockTexture);
 	m_resourceManager->AddTexture("TERRAIN", terrainTexture);
 	m_resourceManager->AddTexture("EXPLOSION", explosionTexture);
+	m_resourceManager->AddTexture("SMOKE", smokeTexture);
 	m_resourceManager->AddTexture("MIRROR", mirrorTexture);
 	m_resourceManager->AddTexture("INDOOR", indoorTexture);
 
@@ -293,6 +302,7 @@ void Scene::RemoveDeletedObjects()
 	auto pred = [&](unique_ptr<GameObject>& object) {
 		if (object->isDeleted() && object->GetType() == GameObjectType::BULLET)
 		{
+			// Æø¹ß ÀÌÆåÆ® »ý¼º
 			auto textureInfo{ make_unique<TextureInfo>() };
 			textureInfo->frameInterver *= 1.5f;
 			textureInfo->isFrameRepeat = false;
@@ -304,6 +314,19 @@ void Scene::RemoveDeletedObjects()
 			explosion->SetTexture(m_resourceManager->GetTexture("EXPLOSION"));
 			explosion->SetTextureInfo(textureInfo);
 			willBeAdded.push_back(move(explosion));
+
+			// ¿¬±â ÀÌÆåÆ® »ý¼º
+			textureInfo = make_unique<TextureInfo>();
+			textureInfo->frameInterver *= 3.0f;
+			textureInfo->isFrameRepeat = false;
+
+			auto smoke{ make_unique<BillboardObject>(m_camera) };
+			smoke->SetPosition(object->GetPosition());
+			smoke->SetMesh(m_resourceManager->GetMesh("SMOKE"));
+			smoke->SetShader(m_resourceManager->GetShader("BLENDING"));
+			smoke->SetTexture(m_resourceManager->GetTexture("SMOKE"));
+			smoke->SetTextureInfo(textureInfo);
+			willBeAdded.push_back(move(smoke));
 		}
 		return object->isDeleted();
 	};

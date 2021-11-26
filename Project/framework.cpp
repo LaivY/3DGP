@@ -1,9 +1,7 @@
 #include "framework.h"
 
 GameFramework::GameFramework(UINT width, UINT height) :
-	m_width{ width },
-	m_height{ height },
-	m_frameIndex{ 0 },
+	m_width{ width }, m_height{ height }, m_frameIndex{ 0 },
 	m_viewport{ 0.0f, 0.0f, static_cast<FLOAT>(width), static_cast<FLOAT>(height), 0.0f, 1.0f },
 	m_scissorRect{ 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) },
 	m_rtvDescriptorSize{ 0 }
