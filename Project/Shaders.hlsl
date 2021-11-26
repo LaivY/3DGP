@@ -77,7 +77,6 @@ float CalculateTessFactor(float3 f3Position)
 PatchTess TerrainTessConstantHS(InputPatch<VSTerrainOutput, 25> patch, uint patchID : SV_PrimitiveID)
 {
     PatchTess output;
-
     output.EdgeTess[0] = CalculateTessFactor(0.5f * (patch[0].position.xyz + patch[4].position.xyz));
     output.EdgeTess[1] = CalculateTessFactor(0.5f * (patch[0].position.xyz + patch[20].position.xyz));
     output.EdgeTess[2] = CalculateTessFactor(0.5f * (patch[4].position.xyz + patch[24].position.xyz));
@@ -87,7 +86,6 @@ PatchTess TerrainTessConstantHS(InputPatch<VSTerrainOutput, 25> patch, uint patc
     for (int i = 0; i < 25; ++i)
         center += patch[i].position.xyz;
     center /= 25.0f;
-    
     output.InsideTess[0] = output.InsideTess[1] = CalculateTessFactor(center);
     return output;
 }

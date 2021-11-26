@@ -276,7 +276,7 @@ void Scene::OnUpdate(FLOAT deltaTime)
 	if (m_skybox) m_skybox->Update();
 	for (auto& object : m_gameObjects)
 		object->Update(deltaTime);
-	for (auto& particle : m_translucences)
+	for (auto& particle : m_particles)
 		particle->Update(deltaTime);
 }
 
@@ -308,11 +308,11 @@ void Scene::RemoveDeletedObjects()
 		return object->isDeleted();
 	};
 	m_gameObjects.erase(remove_if(m_gameObjects.begin(), m_gameObjects.end(), pred), m_gameObjects.end());
-	m_translucences.erase(remove_if(m_translucences.begin(), m_translucences.end(), pred), m_translucences.end());
+	m_particles.erase(remove_if(m_particles.begin(), m_particles.end(), pred), m_particles.end());
 
 	// 총알 삭제될 때 생기는 이펙트는 파티클 객체에 추가한다.
 	for (auto& object : willBeAdded)
-		m_translucences.push_back(move(object));
+		m_particles.push_back(move(object));
 }
 
 void Scene::UpdateObjectsTerrain()
@@ -348,7 +348,7 @@ void Scene::UpdateObjectsTerrain()
 		auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
 		m_camera->SetTerrain(terrain != m_terrains.end() ? terrain->get() : nullptr);
 	}
-	for (auto& object : m_translucences)
+	for (auto& object : m_particles)
 	{
 		pos = object->GetPosition();
 		auto terrain = find_if(m_terrains.begin(), m_terrains.end(), pred);
@@ -415,7 +415,7 @@ void Scene::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, D3D12_C
 		terrain->Render(commandList);
 
 	// 파티클 렌더링
-	for (const auto& particle : m_translucences)
+	for (const auto& particle : m_particles)
 		particle->Render(commandList);
 }
 
@@ -431,7 +431,7 @@ void Scene::CreateBullet()
 	bullet->SetMesh(m_resourceManager->GetMesh("BULLET"));
 	bullet->SetShader(m_resourceManager->GetShader("BLENDING"));
 	bullet->SetTexture(m_resourceManager->GetTexture("ROCK"));
-	m_translucences.push_back(move(bullet));
+	m_particles.push_back(move(bullet));
 }
 
 void Scene::SetSkybox(unique_ptr<Skybox>& skybox)

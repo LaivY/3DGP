@@ -135,8 +135,8 @@ void Player::SetPlayerOnTerrain()
 
 	// 플레이어의 위치 t
 	XMFLOAT2 uv{ (pos.x - LB.x) / (blockWidth * scale.x), 1.0f - ((pos.z - LB.z) / (blockLength * scale.z)) };
-	XMFLOAT3 height{ CubicBezierSum(vertices, uv) };
-	SetPosition(XMFLOAT3{ pos.x, height.y, pos.z });
+	XMFLOAT3 posOnBazier{ CubicBezierSum(vertices, uv) };
+	SetPosition(XMFLOAT3{ pos.x, posOnBazier.y, pos.z });
 }
 
 void Player::SetPlayerNormalAndLook()

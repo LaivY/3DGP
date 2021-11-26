@@ -138,6 +138,7 @@ HeightMapGridTessMesh::HeightMapGridTessMesh(const ComPtr<ID3D12Device>& device,
 
 	CreateVertexBuffer(device, commandList, vertices.data(), sizeof(Texture2Vertex), vertices.size());
 }
+
 // --------------------------------------
 
 HeightMapTerrain::HeightMapTerrain(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList,

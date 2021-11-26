@@ -62,7 +62,7 @@ private:
 	unique_ptr<ResourceManager>				m_resourceManager;	// 모든 메쉬, 셰이더, 텍스쳐들
 
 	vector<unique_ptr<GameObject>>			m_gameObjects;		// 게임오브젝트
-	vector<unique_ptr<GameObject>>			m_translucences;	// 반투명 객체
+	vector<unique_ptr<GameObject>>			m_particles;			// 반투명 객체
 	vector<unique_ptr<HeightMapTerrain>>	m_terrains;			// 지형
 	unique_ptr<GameObject>					m_mirror;			// 거울
 	unique_ptr<Skybox>						m_skybox;			// 스카이박스

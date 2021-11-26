@@ -135,9 +135,6 @@ void TerrainTessShader::CreatePipelineState(const ComPtr<ID3D12Device>& device, 
 		{ "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 
-	auto RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
 	psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 	psoDesc.pRootSignature = rootSignature.Get();
@@ -146,7 +143,6 @@ void TerrainTessShader::CreatePipelineState(const ComPtr<ID3D12Device>& device, 
 	psoDesc.DS = CD3DX12_SHADER_BYTECODE(domainShader.Get());
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	//psoDesc.RasterizerState = RasterizerState;
 	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.SampleMask = UINT_MAX;
@@ -275,15 +271,9 @@ void BlendingShader::CreatePipelineState(const ComPtr<ID3D12Device>& device, con
 	// 블렌딩 설정
 	CD3DX12_BLEND_DESC blendState{ D3D12_DEFAULT };
 	blendState.RenderTarget[0].BlendEnable = TRUE;
-	blendState.RenderTarget[0].LogicOpEnable = FALSE;
 	blendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
 	blendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
 	blendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	blendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-	blendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	blendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-	blendState.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
-	blendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
 	// PSO 생성
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
@@ -326,15 +316,9 @@ void BlendingDepthShader::CreatePipelineState(const ComPtr<ID3D12Device>& device
 	// 블렌딩 설정
 	CD3DX12_BLEND_DESC blendState{ D3D12_DEFAULT };
 	blendState.RenderTarget[0].BlendEnable = TRUE;
-	blendState.RenderTarget[0].LogicOpEnable = FALSE;
 	blendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
 	blendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
 	blendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	blendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-	blendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-	blendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-	blendState.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
-	blendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
 	// PSO 생성
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
@@ -365,7 +349,6 @@ void StencilShader::CreatePipelineState(const ComPtr<ID3D12Device>& device, cons
 #endif
 
 	DX::ThrowIfFailed(D3DCompileFromFile(TEXT("Shaders.hlsl"), NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "VSTextureMain", "vs_5_1", compileFlags, 0, &vertexShader, NULL));
-	DX::ThrowIfFailed(D3DCompileFromFile(TEXT("Shaders.hlsl"), NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PSTextureMain", "ps_5_1", compileFlags, 0, &pixelShader, NULL));
 
 	// 정점 셰이더 레이아웃 설정
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[]
@@ -383,6 +366,7 @@ void StencilShader::CreatePipelineState(const ComPtr<ID3D12Device>& device, cons
 	depthStencilState.StencilEnable = TRUE;
 	depthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
 
+	// 렌더링 OFF
 	CD3DX12_BLEND_DESC blendState{ D3D12_DEFAULT };
 	blendState.RenderTarget[0].RenderTargetWriteMask = 0;
 
@@ -390,7 +374,6 @@ void StencilShader::CreatePipelineState(const ComPtr<ID3D12Device>& device, cons
 	psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 	psoDesc.pRootSignature = rootSignature.Get();
 	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState = depthStencilState;
 	psoDesc.BlendState = blendState;
