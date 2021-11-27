@@ -416,11 +416,11 @@ void Scene::Render(const ComPtr<ID3D12GraphicsCommandList>& commandList, D3D12_C
 		m_player->Render(commandList, m_resourceManager->GetShader("MIRROR"));
 		m_player->SetWorldMatrix(originWorldMatrix);
 
-		// 스텐실 참조값 초기화
-		commandList->OMSetStencilRef(0);
-
 		// 거울 렌더링
 		m_mirror->Render(commandList);
+
+		// 스텐실 참조값 초기화
+		commandList->OMSetStencilRef(0);
 	}
 
 	// 스카이박스 렌더링

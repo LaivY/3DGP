@@ -2,15 +2,13 @@
 
 void Texture::LoadTextureFile(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, UINT rootParameterIndex, const wstring& fileName)
 {
-	ComPtr<ID3D12Resource> textureBuffer;
-	ComPtr<ID3D12Resource> textureUploadBuffer;
+	ComPtr<ID3D12Resource> textureBuffer, textureUploadBuffer;
 
 	// DDS 텍스쳐 로딩
 	unique_ptr<uint8_t[]> ddsData;
 	vector<D3D12_SUBRESOURCE_DATA> subresources;
 	DDS_ALPHA_MODE ddsAlphaMode{ DDS_ALPHA_MODE_UNKNOWN };
-	DX::ThrowIfFailed(DirectX::LoadDDSTextureFromFileEx(device.Get(), fileName.c_str(), 0,
-		D3D12_RESOURCE_FLAG_NONE, DDS_LOADER_DEFAULT, &textureBuffer, ddsData, subresources, &ddsAlphaMode));
+	DX::ThrowIfFailed(LoadDDSTextureFromFileEx(device.Get(), fileName.c_str(), 0, D3D12_RESOURCE_FLAG_NONE, DDS_LOADER_DEFAULT, &textureBuffer, ddsData, subresources, &ddsAlphaMode));
 
 	// 디폴트 힙으로 데이터 복사하기 위한 업로드 힙 생성
 	UINT nSubresources{ (UINT)subresources.size() };
@@ -48,7 +46,7 @@ void Texture::CreateSrvDescriptorHeap(const ComPtr<ID3D12Device>& device)
 
 void Texture::CreateShaderResourceView(const ComPtr<ID3D12Device>& device)
 {
-	D3D12_CPU_DESCRIPTOR_HANDLE srvDescriptorHeapStart{ m_srvHeap->GetCPUDescriptorHandleForHeapStart() };
+	D3D12_CPU_DESCRIPTOR_HANDLE srvDescriptorHandle{ m_srvHeap->GetCPUDescriptorHandleForHeapStart() };
 	for (const auto& [texture, _] : m_textures)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -56,8 +54,8 @@ void Texture::CreateShaderResourceView(const ComPtr<ID3D12Device>& device)
 		srvDesc.Format = texture->GetDesc().Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = -1;
-		device->CreateShaderResourceView(texture.Get(), &srvDesc, srvDescriptorHeapStart);
-		srvDescriptorHeapStart.ptr += g_cbvSrvDescriptorIncrementSize;
+		device->CreateShaderResourceView(texture.Get(), &srvDesc, srvDescriptorHandle);
+		srvDescriptorHandle.ptr += g_cbvSrvDescriptorIncrementSize;
 	}
 }
 
