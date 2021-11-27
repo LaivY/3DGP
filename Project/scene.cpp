@@ -44,10 +44,10 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	auto cubeMesh{ make_shared<CubeMesh>(device, commandList, 0.5f, 0.5f, 0.5f) };
 	auto indoorMesh{ make_shared<ReverseCubeMesh>(device, commandList, 15.0f, 15.0f, 15.0f) };
 	auto bulletMesh{ make_shared<CubeMesh>(device, commandList, 0.1f, 0.1f, 0.1f) };
-	auto explosionMesh{ make_shared<TextureRectMesh>(device, commandList, 5.0f, 0.0f, 5.0f, XMFLOAT3{}) };
-	auto smokeMesh{ make_shared<TextureRectMesh>(device, commandList, 5.0f, 0.0f, 5.0f, XMFLOAT3{}) };
+	auto explosionMesh{ make_shared<BillboardMesh>(device, commandList, XMFLOAT3{}, XMFLOAT2{ 5.0f, 5.0f }) };
+	auto smokeMesh{ make_shared<BillboardMesh>(device, commandList, XMFLOAT3{}, XMFLOAT2{ 5.0f, 5.0f }) };
 	auto mirrorMesh{ make_shared<TextureRectMesh>(device, commandList, 15.0f, 0.0f, 15.0f, XMFLOAT3{ 0.0f, 0.0f, 0.1f }) };
-	
+
 	// 셰이더 생성
 	auto colorShader{ make_shared<Shader>(device, rootSignature) };
 	auto textureShader{ make_shared<TextureShader>(device, rootSignature) };
@@ -151,9 +151,17 @@ void Scene::OnInit(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12Graphi
 	terrain->SetPosition({ -257.0f / 2.0f, 0.0f, -257.0f / 2.0f });
 	m_terrains.push_back(move(terrain));
 
+	// 빌보드 사각형 생성
+	auto billboardObject{ make_unique<GameObject>() };
+	billboardObject->SetPosition(XMFLOAT3{ 0.0f, 500.0f, 0.0f });
+	billboardObject->SetMesh(m_resourceManager->GetMesh("BILLBOARD"));
+	billboardObject->SetShader(m_resourceManager->GetShader("BILLBOARD"));
+	billboardObject->SetTexture(m_resourceManager->GetTexture("ROCK"));
+	m_gameObjects.push_back(move(billboardObject));
+
 	// 실내 생성
 	auto indoor{ make_unique<GameObject>() };
-	indoor->SetPosition({ 0.0f, 500.0f, 0.0f });
+	indoor->SetPosition(XMFLOAT3{ 0.0f, 500.0f, 0.0f });
 	indoor->SetMesh(m_resourceManager->GetMesh("INDOOR"));
 	indoor->SetShader(m_resourceManager->GetShader("TEXTURE"));
 	indoor->SetTexture(m_resourceManager->GetTexture("INDOOR"));
@@ -307,7 +315,7 @@ void Scene::RemoveDeletedObjects()
 			textureInfo->frameInterver *= 1.5f;
 			textureInfo->isFrameRepeat = false;
 
-			auto explosion{ make_unique<BillboardObject>(m_camera) };
+			auto explosion{ make_unique<GameObject>() };
 			explosion->SetPosition(object->GetPosition());
 			explosion->SetMesh(m_resourceManager->GetMesh("EXPLOSION"));
 			explosion->SetShader(m_resourceManager->GetShader("BLENDING"));
@@ -320,7 +328,7 @@ void Scene::RemoveDeletedObjects()
 			textureInfo->frameInterver *= 3.0f;
 			textureInfo->isFrameRepeat = false;
 
-			auto smoke{ make_unique<BillboardObject>(m_camera) };
+			auto smoke{ make_unique<GameObject>() };
 			smoke->SetPosition(object->GetPosition());
 			smoke->SetMesh(m_resourceManager->GetMesh("SMOKE"));
 			smoke->SetShader(m_resourceManager->GetShader("BLENDING"));
@@ -452,7 +460,7 @@ void Scene::CreateBullet()
 	unique_ptr<Bullet> bullet{ make_unique<Bullet>(m_player->GetPosition(), m_player->GetLook(), m_player->GetNormal(), 100.0f) };
 	bullet->SetPosition(Vector3::Add(m_player->GetPosition(), XMFLOAT3{ 0.0f, 0.5f, 0.0f }));
 	bullet->SetMesh(m_resourceManager->GetMesh("BULLET"));
-	bullet->SetShader(m_resourceManager->GetShader("BLENDING"));
+	bullet->SetShader(m_resourceManager->GetShader("TEXTURE"));
 	bullet->SetTexture(m_resourceManager->GetTexture("ROCK"));
 	m_particles.push_back(move(bullet));
 }

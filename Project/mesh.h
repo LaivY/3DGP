@@ -15,6 +15,13 @@ struct ColorVertex : Vertex
 	XMFLOAT4 m_color;
 };
 
+struct BillboardVertex : Vertex
+{
+	BillboardVertex(const XMFLOAT3& position, const XMFLOAT2& size) : Vertex{ position }, m_size{ size } { }
+
+	XMFLOAT2 m_size;
+};
+
 struct TextureVertex : Vertex
 {
 	TextureVertex(const XMFLOAT3& position, const XMFLOAT2& uv) : Vertex{ position }, m_uv{ uv } { }
@@ -78,4 +85,11 @@ class TextureRectMesh : public Mesh
 public:
 	TextureRectMesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, FLOAT width, FLOAT length, FLOAT height, XMFLOAT3 position);
 	~TextureRectMesh() = default;
+};
+
+class BillboardMesh : public Mesh
+{
+public:
+	BillboardMesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const XMFLOAT3& position, const XMFLOAT2& size);
+	~BillboardMesh() = default;
 };

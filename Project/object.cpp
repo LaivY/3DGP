@@ -111,36 +111,6 @@ XMFLOAT3 GameObject::GetPosition() const
 
 // --------------------------------------
 
-BillboardObject::BillboardObject(const shared_ptr<Camera>& camera, const XMFLOAT3& offset) : GameObject{}, m_camera{ camera }, m_offset{ offset }
-{
-	m_type = GameObjectType::BILLBOARD;
-}
-
-void BillboardObject::Update(FLOAT deltaTime)
-{
-	GameObject::Update(deltaTime);
-
-	XMFLOAT3 target{ m_camera->GetEye() };	// ºÁ¾ßÇÒ °÷
-	XMFLOAT3 pos{ GetPosition() };			// °´Ã¼ÀÇ À§Ä¡
-
-	XMFLOAT3 up{ GetUp() };
-	XMFLOAT3 look{ Vector3::Normalize(Vector3::Sub(target, pos)) };
-	XMFLOAT3 right{ Vector3::Normalize(Vector3::Cross(up, look)) };
-
-	m_worldMatrix._11 = right.x;	m_worldMatrix._12 = right.y;	m_worldMatrix._13 = right.z;
-	m_worldMatrix._21 = up.x;		m_worldMatrix._22 = up.y;		m_worldMatrix._23 = up.z;
-	m_worldMatrix._31 = look.x;		m_worldMatrix._32 = look.y;		m_worldMatrix._33 = look.z;
-	m_worldMatrix._41 = pos.x;		m_worldMatrix._42 = pos.y;		m_worldMatrix._43 = pos.z;
-}
-
-void BillboardObject::SetCamera(const shared_ptr<Camera>& camera)
-{
-	if (m_camera) m_camera.reset();
-	m_camera = camera;
-}
-
-// --------------------------------------
-
 Bullet::Bullet(const XMFLOAT3& position, const XMFLOAT3& direction, const XMFLOAT3& up, FLOAT speed, FLOAT damage)
 	: m_origin{ position }, m_direction{ direction }, m_speed{ speed }, m_damage{ damage }
 {

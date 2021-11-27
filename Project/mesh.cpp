@@ -324,3 +324,12 @@ TextureRectMesh::TextureRectMesh(const ComPtr<ID3D12Device>& device, const ComPt
 
 	CreateVertexBuffer(device, commandList, vertices.data(), sizeof(TextureVertex), vertices.size());
 }
+
+BillboardMesh::BillboardMesh(const ComPtr<ID3D12Device>& device, const ComPtr<ID3D12GraphicsCommandList>& commandList, const XMFLOAT3& position, const XMFLOAT2& size)
+{
+	m_nIndices = 0;
+	m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+
+	BillboardVertex vertex{ position, size };
+	CreateVertexBuffer(device, commandList, &vertex, sizeof(BillboardVertex), 1);
+}
